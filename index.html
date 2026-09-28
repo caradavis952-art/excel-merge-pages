@@ -487,6 +487,7 @@ var I18N = {
     btnMerge: '开始合并',
     btnMerging: '合并中…',
     btnDownload: '下载 Excel',
+    btnDownloadZip: '下载压缩包',
     dlHintMulti: '共 {n} 个文件，将依次下载（浏览器可能请求允许多文件下载）',
 
     resTitle: '合并结果',
@@ -609,6 +610,7 @@ var I18N = {
     btnMerge: 'Merge',
     btnMerging: 'Merging…',
     btnDownload: 'Download Excel',
+    btnDownloadZip: 'Download zip',
     dlHintMulti: '{n} files will be downloaded one by one (the browser may ask to allow multiple downloads)',
 
     resTitle: 'Results',
@@ -749,6 +751,7 @@ function updateModeHint() {
   if (!el) return;
   var mode = mergeMode();
   el.textContent = mode === '2' ? t('s3Desc2') : mode === '3' ? t('s3Desc3') : t('s3Desc');
+  if (btnDownload) btnDownload.textContent = mode === '3' ? t('btnDownloadZip') : t('btnDownload');
 }
 
 /* ===================== 常量与状态 ===================== */
@@ -1207,6 +1210,7 @@ async function startMerge() {
   } finally {
     state.merging = false;
     btnMerge.textContent = t('btnMerge');
+    updateModeHint();
     updateButtons();
   }
 }
