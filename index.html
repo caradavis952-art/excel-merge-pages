@@ -296,7 +296,7 @@ window._loadScript = function (urls) {
       <span class="step-no">2</span>
       <div>
         <div class="step-title" data-i18n="s2Title">合并配置</div>
-        <div class="step-desc" data-i18n="s2Desc">按需开启以下选项（均为可选）</div>
+        <div class="step-desc" data-i18n="s2Desc">都不勾时：表头相同的文件合成一个工作表，表头不同的各组各放一个新工作表，最后下载一个 Excel。下面两项是可选的另一种合并方式。</div>
       </div>
     </div>
     <div class="opt-list">
@@ -329,7 +329,7 @@ window._loadScript = function (urls) {
       <span class="step-no">3</span>
       <div>
         <div class="step-title" data-i18n="s3Title">合并与下载</div>
-        <div class="step-desc" data-i18n="s3Desc">开始合并后，可在旁边直接下载 Excel（表头不同的文件会分组分别合并、分别下载）</div>
+        <div class="step-desc" data-i18n="s3Desc">开始合并后下载一个 Excel。表头相同的在同一个工作表，表头不同的各组各占一个新工作表。</div>
       </div>
     </div>
     <div class="actions">
@@ -380,7 +380,7 @@ var I18N = {
     emptyHint: '尚未上传文件——拖拽或点击上方区域上传',
 
     s2Title: '合并配置',
-    s2Desc: '按需开启以下选项（均为可选）',
+    s2Desc: '都不勾时：表头相同的文件合成一个工作表，表头不同的各组各放一个新工作表，最后下载一个 Excel。下面两项是可选的另一种合并方式。',
     optUnionTitle: '按表头并集合并',
     optUnionDesc: '不要求各文件表头完全一致：以所有文件表头的并集为准合并为一个文件，各文件缺失的单元格留空',
     optSourceTitle: '在合并表格最后一列填充源文件名',
@@ -391,20 +391,20 @@ var I18N = {
     namePhGroups: '默认：各组分别以组内源文件名拼接命名（共 {n} 组）',
 
     s3Title: '合并与下载',
-    s3Desc: '开始合并后，可在旁边直接下载 Excel（表头不同的文件会分组分别合并、分别下载）',
+    s3Desc: '开始合并后下载一个 Excel。表头相同的在同一个工作表，表头不同的各组各占一个新工作表。',
     btnMerge: '开始合并',
     btnMerging: '合并中…',
     btnDownload: '下载 Excel',
     dlHintMulti: '共 {n} 个文件，将依次下载（浏览器可能请求允许多文件下载）',
 
     resTitle: '合并结果',
-    resSummary: '共 {g} 个合并文件 · {f} 个源文件 · {r} 行数据',
+    resSummary: '共 {g} 个工作表 · {f} 个源文件 · {r} 行数据',
     staleNotice: '⚠️ 文件或配置已发生变化，以下合并结果已失效——请重新点击"开始合并"。',
     truncNotice: '⚠️ 共有 <b>{cells}</b> 个单元格文本超过 Excel 单元格长度上限（32767 字符），已截断并以"..."结尾（涉及 {rows} 行数据）；相应单元格已添加批注"文本超长已截断"。',
     noTruncNotice: '✅ 未发生文本超长截断。',
     groupMeta: '{f} 个文件 · {r} 行数据 · {c} 列',
     groupTruncCells: '{n} 个单元格截断',
-    btnDownloadGroup: '下载本组',
+    btnDownloadGroup: '仅下载此表',
     groupHeaderPrefix: '表头：',
     headerColsMore: '…共 {n} 列',
     groupHeaderColsMore: '…（共 {n} 列）',
@@ -467,7 +467,7 @@ var I18N = {
     emptyHint: 'No files yet — drag files onto the area above, or click to browse',
 
     s2Title: 'Merge Options',
-    s2Desc: 'Toggle the options you need (all optional)',
+    s2Desc: 'Leave both off: files with the same header share one sheet; each different header gets its own new sheet. You download one Excel. The two options below are other ways to merge.',
     optUnionTitle: 'Merge by union of headers',
     optUnionDesc: 'Headers do not need to match exactly: all files are merged into one using the union of every header; cells a file does not have are left empty',
     optSourceTitle: 'Append source file name as the last column',
@@ -478,20 +478,20 @@ var I18N = {
     namePhGroups: 'Default: each group is named by joining its source file names ({n} groups)',
 
     s3Title: 'Merge & Download',
-    s3Desc: 'After merging, download the Excel right next to the Merge button (files with different headers are merged group by group)',
+    s3Desc: 'After merging, download one Excel. Matching headers share a sheet; each different header gets its own new sheet.',
     btnMerge: 'Merge',
     btnMerging: 'Merging…',
     btnDownload: 'Download Excel',
     dlHintMulti: '{n} files will be downloaded one by one (the browser may ask to allow multiple downloads)',
 
     resTitle: 'Results',
-    resSummary: '{g} merged files · {f} source files · {r} rows',
+    resSummary: '{g} sheets · {f} source files · {r} rows',
     staleNotice: '⚠️ Files or options have changed — the results below are stale. Click "Merge" again.',
     truncNotice: '⚠️ <b>{cells}</b> cells exceeded the Excel cell character limit (32,767) and were truncated with a trailing "..." ({rows} rows affected); a "Text too long, truncated" comment was added to those cells.',
     noTruncNotice: '✅ No text was truncated.',
     groupMeta: '{f} files · {r} rows · {c} columns',
     groupTruncCells: '{n} cells truncated',
-    btnDownloadGroup: 'Download group',
+    btnDownloadGroup: 'Download this sheet only',
     groupHeaderPrefix: 'Header: ',
     headerColsMore: '…{n} cols in total',
     groupHeaderColsMore: '…({n} columns in total)',
@@ -904,6 +904,7 @@ function updatePlaceholder() {
 function invalidateResults() {
   if (state.results) {
     state.stale = true;
+    state.workbook = null;
     renderResults();
   }
   updatePlaceholder();
@@ -913,13 +914,9 @@ function invalidateResults() {
 function updateButtons() {
   var files = okFiles();
   btnMerge.disabled = state.merging || !files.length;
-  var canDownload = !state.merging && state.results && !state.stale && state.results.length > 0;
+  var canDownload = !state.merging && state.results && state.workbook && !state.stale && state.results.length > 0;
   btnDownload.disabled = !canDownload;
-  if (canDownload && state.results.length > 1) {
-    dlHint.textContent = t('dlHintMulti', { n: state.results.length });
-  } else {
-    dlHint.textContent = '';
-  }
+  dlHint.textContent = '';
 }
 
 /* ===================== 合并 ===================== */
@@ -957,8 +954,20 @@ async function startMerge() {
       }));
       await tick();
       var r = await mergeGroup(groups[gi]);
+      r.sheetName = groups[gi].files.length === 1
+        ? groups[gi].files[0].basename
+        : defaultBaseFor(groups[gi].files);
       results.push(r);
     }
+    var built = await buildOutputWorkbook(results.map(function (r) {
+      return { name: r.sheetName, headers: r.headers, rows: r.rows };
+    }));
+    results.forEach(function (r, i) {
+      var one = fillCounts(r.headers, r.rows);
+      r.truncatedCells = one.cells;
+      r.truncatedRows = one.rows;
+    });
+    state.workbook = built;
     state.results = results;
     renderResults();
     setStatus('');
@@ -1017,12 +1026,12 @@ async function mergeGroup(group) {
   }
 
   var finalHeaders = addSrc ? headers.concat([t('sourceCol')]) : headers.slice();
-  var built = await buildOutputWorkbook(finalHeaders, rows);
 
   return {
-    blob: built.blob,
-    truncatedCells: built.truncatedCells,
-    truncatedRows: built.truncatedRows,
+    headers: finalHeaders,
+    rows: rows,
+    truncatedCells: 0,
+    truncatedRows: 0,
     rowCount: rows.length,
     headerCount: finalHeaders.length,
     files: group.files.map(function (f) { return { name: f.name, basename: f.basename, source: f.source }; }),
@@ -1032,9 +1041,33 @@ async function mergeGroup(group) {
 }
 
 /* 生成输出 workbook：截断 + 批注 + 表头样式 + 列宽 + 冻结首行 */
-async function buildOutputWorkbook(headers, rows) {
+async function buildOutputWorkbook(sheets) {
   var wb = new ExcelJS.Workbook();
-  var ws = wb.addWorksheet(t('sheetName'), { views: [{ state: 'frozen', ySplit: 1 }] });
+  var used = {};
+  var totalCells = 0, totalRows = 0;
+  for (var si = 0; si < sheets.length; si++) {
+    var spec = sheets[si];
+    var base = sheetNameOf(spec.name, si);
+    var name = base, n = 2;
+    while (used[name]) { name = base.slice(0, 28) + '_' + (n++); }
+    used[name] = true;
+    var built = fillWorksheet(wb.addWorksheet(name, { views: [{ state: 'frozen', ySplit: 1 }] }), spec.headers, spec.rows);
+    totalCells += built.truncatedCells;
+    totalRows += built.truncatedRows;
+  }
+  var buf = await wb.xlsx.writeBuffer();
+  var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  return { blob: blob, truncatedCells: totalCells, truncatedRows: totalRows };
+}
+
+function sheetNameOf(raw, index) {
+  var s = String(raw || '').replace(/[\\/*?:\[\]]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!s) s = t('sheetName') + (index + 1);
+  return s.slice(0, 31);
+}
+
+/* 写入一个工作表：截断 + 批注 + 表头样式 + 列宽 + 冻结首行。返回截断统计。 */
+function fillWorksheet(ws, headers, rows) {
 
   /* 表头行 */
   var hRow = ws.addRow(headers);
@@ -1087,9 +1120,7 @@ async function buildOutputWorkbook(headers, rows) {
     try { ws.getColumn(w + 1).width = Math.min(Math.max(widths[w] + 3, 10), 60); } catch (e) { /* ignore */ }
   }
 
-  var buf = await wb.xlsx.writeBuffer();
-  var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  return { blob: blob, truncatedCells: truncMarks.length, truncatedRows: truncRowSet.size };
+  return { truncatedCells: truncMarks.length, truncatedRows: truncRowSet.size };
 }
 
 /* ===================== 结果渲染 ===================== */
@@ -1146,7 +1177,7 @@ function renderResults() {
     html += '<div class="group-card">' +
       '<div class="group-head">' +
       '<div>' +
-      '<div class="group-name">' + esc(r.name) + '</div>' +
+      '<div class="group-name">' + esc(r.sheetName || r.name) + '</div>' +
       '<div class="group-meta">' + esc(t('groupMeta', { f: r.files.length, r: r.rowCount, c: r.headerCount })) +
       (r.truncatedCells ? ' · <span class="warn-txt">' + esc(t('groupTruncCells', { n: r.truncatedCells })) + '</span>' : '') + '</div>' +
       '</div>' +
@@ -1159,11 +1190,13 @@ function renderResults() {
   resultBody.innerHTML = html;
 
   Array.prototype.forEach.call(resultBody.querySelectorAll('[data-dl]'), function (b) {
-    b.addEventListener('click', function () {
+    b.addEventListener('click', async function () {
       var i = parseInt(b.getAttribute('data-dl'), 10);
       if (state.stale) return;
-      downloadBlob(rs[i].blob, rs[i].name);
-      toast(t('toastDlOne', { name: rs[i].name }), 'ok');
+      var one = await buildOutputWorkbook([{ name: rs[i].sheetName, headers: rs[i].headers, rows: rs[i].rows }]);
+      var name = (rs[i].sheetName || t('sheetName')) + '.xlsx';
+      downloadBlob(one.blob, sanitizeFilename(name));
+      toast(t('toastDlOne', { name: name }), 'ok');
     });
   });
 }
@@ -1181,14 +1214,33 @@ function downloadBlob(blob, filename) {
 }
 
 async function downloadAll() {
-  if (!state.results || state.stale || state.merging) return;
-  var rs = state.results;
-  for (var i = 0; i < rs.length; i++) {
-    downloadBlob(rs[i].blob, rs[i].name);
-    if (i < rs.length - 1) await sleep(400);
+  if (!state.results || !state.workbook || state.stale || state.merging) return;
+  var name = workbookName();
+  downloadBlob(state.workbook.blob, name);
+  toast(t('toastDlOne', { name: name }), 'ok');
+}
+
+function workbookName() {
+  var custom = nameInput.value.trim();
+  var base = custom
+    ? sanitizeFilename(custom).replace(/\.xlsx$/i, '')
+    : defaultBaseFor(okFiles());
+  if (!base) base = t('fallbackBase');
+  return base + '.xlsx';
+}
+
+function fillCounts(headers, rows) {
+  var cells = 0, rowSet = {};
+  for (var ri = 0; ri < rows.length; ri++) {
+    var src = rows[ri];
+    for (var ci = 0; ci < src.length; ci++) {
+      if (typeof src[ci] === 'string' && src[ci].length > CELL_LIMIT) {
+        cells++;
+        rowSet[ri] = true;
+      }
+    }
   }
-  if (rs.length > 1) toast(t('toastDlMulti', { n: rs.length }), 'ok');
-  else toast(t('toastDlOne', { name: rs[0].name }), 'ok');
+  return { cells: cells, rows: Object.keys(rowSet).length };
 }
 
 /* ===================== 事件绑定 ===================== */
