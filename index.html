@@ -302,16 +302,32 @@ window._loadScript = function (urls) {
       <span class="step-no">2</span>
       <div>
         <div class="step-title" data-i18n="s2Title">合并配置</div>
-        <div class="step-desc" data-i18n="s2Desc">都不勾时：表头相同的文件合成一个工作表，表头不同的各组各放一个新工作表，最后下载一个 Excel。下面两项是可选的另一种合并方式。</div>
+        <div class="step-desc" data-i18n="s2Desc">三种方式选一种。源文件名是附加列，三种都可以开。</div>
       </div>
     </div>
     <div class="opt-list">
-      <label class="opt-card" id="cardUnion">
-        <input type="checkbox" id="optUnion">
+      <label class="opt-card on" id="cardMode1">
+        <input type="radio" name="mergeMode" id="mode1" value="1" checked>
         <span class="opt-box"></span>
         <span>
-          <span class="opt-title" data-i18n="optUnionTitle">按表头并集合并</span>
-          <span class="opt-desc" data-i18n="optUnionDesc">不要求各文件表头完全一致：以所有文件表头的并集为准合并为一个文件，各文件缺失的单元格留空</span>
+          <span class="opt-title" data-i18n="mode1Title">每个文件一个工作表</span>
+          <span class="opt-desc" data-i18n="mode1Desc">输出一个 Excel。每个源文件的第一张表放进一个工作表，表名用源文件名。</span>
+        </span>
+      </label>
+      <label class="opt-card" id="cardMode2">
+        <input type="radio" name="mergeMode" id="mode2" value="2">
+        <span class="opt-box"></span>
+        <span>
+          <span class="opt-title" data-i18n="mode2Title">按表头并集合并</span>
+          <span class="opt-desc" data-i18n="mode2Desc">合成一个工作表。列按文件先后排列，先出现的列在前，对不上的格子留空。</span>
+        </span>
+      </label>
+      <label class="opt-card" id="cardMode3">
+        <input type="radio" name="mergeMode" id="mode3" value="3">
+        <span class="opt-box"></span>
+        <span>
+          <span class="opt-title" data-i18n="mode3Title">表头相同的合成一组</span>
+          <span class="opt-desc" data-i18n="mode3Desc">列名相同（不看顺序、不区分全角空格）的文件合成一个 Excel。主按钮下载一个压缩包，每组也可以单独下载。</span>
         </span>
       </label>
       <label class="opt-card" id="cardSource">
@@ -319,7 +335,7 @@ window._loadScript = function (urls) {
         <span class="opt-box"></span>
         <span>
           <span class="opt-title" data-i18n="optSourceTitle">在合并表格最后一列填充源文件名</span>
-          <span class="opt-desc" data-i18n="optSourceDesc">合并结果最后追加一列"源文件名"，值为每条数据所属源 Excel 的纯文件名（不含 .xlsx 后缀；zip 内嵌套文件夹也不带文件夹路径）</span>
+          <span class="opt-desc" data-i18n="optSourceDesc">追加一列源文件名（不含 .xlsx）。如果已有同名列，新列名加 _2，不写入原来的列。</span>
         </span>
       </label>
     </div>
@@ -388,11 +404,15 @@ var I18N = {
     emptyHint: '尚未上传文件——拖拽或点击上方区域上传',
 
     s2Title: '合并配置',
-    s2Desc: '都不勾时：表头相同的文件合成一个工作表，表头不同的各组各放一个新工作表，最后下载一个 Excel。下面两项是可选的另一种合并方式。',
-    optUnionTitle: '按表头并集合并',
-    optUnionDesc: '不要求各文件表头完全一致：以所有文件表头的并集为准合并为一个文件，各文件缺失的单元格留空',
+    s2Desc: '三种方式选一种。源文件名是附加列，三种都可以开。',
+    mode1Title: '每个文件一个工作表',
+    mode1Desc: '输出一个 Excel。每个源文件的第一张表放进一个工作表，表名用源文件名。',
+    mode2Title: '按表头并集合并',
+    mode2Desc: '合成一个工作表。列按文件先后排列，先出现的列在前，对不上的格子留空。',
+    mode3Title: '表头相同的合成一组',
+    mode3Desc: '列名相同（不看顺序、不区分全角空格）的文件合成一个 Excel。主按钮下载一个压缩包，每组也可以单独下载。',
     optSourceTitle: '在合并表格最后一列填充源文件名',
-    optSourceDesc: '合并结果最后追加一列"源文件名"，值为每条数据所属源 Excel 的纯文件名（不含 .xlsx 后缀；zip 内嵌套文件夹也不带文件夹路径）',
+    optSourceDesc: '追加一列源文件名（不含 .xlsx）。如果已有同名列，新列名加 _2，不写入原来的列。',
     nameLabel: '合并文件名（可选，留空则默认用源文件名拼接）',
     namePhDefault: '默认使用源文件名拼接（如：文件A_文件B.xlsx）',
     namePhSingle: '默认：{name}.xlsx',
@@ -477,11 +497,15 @@ var I18N = {
     emptyHint: 'No files yet — drag files onto the area above, or click to browse',
 
     s2Title: 'Merge Options',
-    s2Desc: 'Leave both off: files with the same header share one sheet; each different header gets its own new sheet. You download one Excel. The two options below are other ways to merge.',
-    optUnionTitle: 'Merge by union of headers',
-    optUnionDesc: 'Headers do not need to match exactly: all files are merged into one using the union of every header; cells a file does not have are left empty',
+    s2Desc: 'Pick one of the three ways. The source-file column is optional and works with all three.',
+    mode1Title: 'One sheet per file',
+    mode1Desc: 'One Excel. Each source file’s first sheet becomes its own worksheet, named after the file.',
+    mode2Title: 'Merge by union of headers',
+    mode2Desc: 'One sheet. Columns follow file order: first-seen columns stay in front, later new columns are appended, missing cells stay empty.',
+    mode3Title: 'Group files with the same headers',
+    mode3Desc: 'Files whose column names match as a set (order ignored, full-width spaces trimmed) become one Excel each. The main button downloads a zip; each group can also be downloaded alone.',
     optSourceTitle: 'Append source file name as the last column',
-    optSourceDesc: 'Appends a "Source File" column containing the plain file name of the Excel each row came from (no .xlsx extension, no folder path for files inside zips)',
+    optSourceDesc: 'Adds a source-file column (no .xlsx). If that name already exists, the new column is named with a _2 suffix and does not overwrite the original.',
     nameLabel: 'Merged file name (optional — leave empty to join source file names)',
     namePhDefault: 'Defaults to joining source file names (e.g. FileA_FileB.xlsx)',
     namePhSingle: 'Default: {name}.xlsx',
@@ -615,7 +639,11 @@ var state = {
 var $ = function (id) { return document.getElementById(id); };
 var dropzone = $('dropzone'), fileInput = $('fileInput'), fileTable = $('fileTable'), fileTbody = $('fileTbody'), emptyHint = $('emptyHint');
 var statusLine = $('statusLine'), statusText = $('statusText');
-var optUnion = $('optUnion'), optSource = $('optSource'), cardUnion = $('cardUnion'), cardSource = $('cardSource');
+var optSource = $('optSource'), cardSource = $('cardSource');
+function mergeMode() {
+  var el = document.querySelector('input[name="mergeMode"]:checked');
+  return el ? el.value : '1';
+}
 var nameInput = $('nameInput');
 var btnMerge = $('btnMerge'), btnDownload = $('btnDownload'), dlHint = $('dlHint');
 var resultCard = $('resultCard'), resultSummary = $('resultSummary'), resultBody = $('resultBody');
@@ -643,9 +671,18 @@ function setStatus(text) {
   else { statusLine.classList.remove('show'); }
 }
 /* 表头规范化 key：null→''，转字符串并去首尾空白 */
-function normKey(h) { return h == null ? '' : String(h).trim(); }
-function headerKey(header) {
-  return JSON.stringify(header.map(normKey));
+function normKey(h) {
+  if (h == null) return '';
+  return String(h).replace(/\u3000/g, ' ').replace(/\s+/g, ' ').trim();
+}
+/* 表头相同 = 列名集合相同：不看顺序，空列不算，大小写不合并 */
+function headerSetKey(header) {
+  var set = {};
+  header.forEach(function (h) {
+    var k = normKey(h);
+    if (k) set[k] = true;
+  });
+  return JSON.stringify(Object.keys(set).sort());
 }
 /* 去除行尾部的空单元格 */
 function trimTrailingEmpty(arr) {
@@ -902,9 +939,11 @@ function okFiles() { return state.files.filter(function (f) { return f.status ==
 function sourceLabelOf(source) { return source || t('sourceDirect'); }
 
 function groupCountFor(files) {
-  if (optUnion.checked) return 1;
+  var mode = mergeMode();
+  if (mode === '1') return files.length || 1;
+  if (mode === '2') return 1;
   var keys = new Set();
-  files.forEach(function (f) { keys.add(headerKey(f.header)); });
+  files.forEach(function (f) { keys.add(headerSetKey(f.header)); });
   return keys.size;
 }
 
@@ -924,7 +963,7 @@ function updatePlaceholder() {
     nameInput.placeholder = t('namePhDefault');
     return;
   }
-  if (optUnion.checked || groupCountFor(files) === 1) {
+  if (mergeMode() !== '3' || groupCountFor(files) === 1) {
     nameInput.placeholder = t('namePhSingle', { name: defaultBaseFor(files) });
   } else {
     nameInput.placeholder = t('namePhGroups', { n: groupCountFor(files) });
@@ -935,6 +974,7 @@ function invalidateResults() {
   if (state.results) {
     state.stale = true;
     state.workbook = null;
+    state.zipBlob = null;
     renderResults();
   }
   updatePlaceholder();
@@ -944,21 +984,36 @@ function invalidateResults() {
 function updateButtons() {
   var files = okFiles();
   btnMerge.disabled = state.merging || !files.length;
-  var canDownload = !state.merging && state.results && state.workbook && !state.stale && state.results.length > 0;
+  var canDownload = !state.merging && state.results && !state.stale && state.results.length > 0
+    && (mergeMode() === '3' ? state.zipBlob : state.workbook);
   btnDownload.disabled = !canDownload;
   dlHint.textContent = '';
 }
 
 /* ===================== 合并 ===================== */
 function buildGroups(files) {
-  if (optUnion.checked) return [{ files: files, union: true }];
+  var mode = mergeMode();
+  if (mode === '1') {
+    return files.map(function (f) { return { files: [f], union: false, byName: false }; });
+  }
+  if (mode === '2') return [{ files: files, union: true, byName: true }];
   var map = new Map(), order = [];
   files.forEach(function (f) {
-    var key = headerKey(f.header);
-    if (!map.has(key)) { var g = { files: [], union: false }; map.set(key, g); order.push(g); }
+    var key = headerSetKey(f.header);
+    if (!map.has(key)) { var g = { files: [], union: false, byName: true }; map.set(key, g); order.push(g); }
     map.get(key).files.push(f);
   });
   return order;
+}
+
+function sourceColumnName(headers) {
+  var used = {};
+  headers.forEach(function (h) { used[normKey(h)] = true; });
+  var base = t('sourceCol');
+  if (!used[normKey(base)]) return base;
+  var n = 2, name = base + '_' + n;
+  while (used[normKey(name)]) { n++; name = base + '_' + n; }
+  return name;
 }
 
 async function startMerge() {
@@ -989,15 +1044,31 @@ async function startMerge() {
         : defaultBaseFor(groups[gi].files);
       results.push(r);
     }
-    var built = await buildOutputWorkbook(results.map(function (r) {
-      return { name: r.sheetName, headers: r.headers, rows: r.rows };
-    }));
-    results.forEach(function (r, i) {
+    var built = null;
+    var zipBlob = null;
+    if (mergeMode() === '3') {
+      var zip = new JSZip();
+      var used = {};
+      for (var zi = 0; zi < results.length; zi++) {
+        var one = await buildOutputWorkbook([{ name: results[zi].sheetName, headers: results[zi].headers, rows: results[zi].rows }]);
+        results[zi].blob = one.blob;
+        var fname = groupFileName(results[zi], used);
+        results[zi].name = fname;
+        zip.file(fname, one.blob);
+      }
+      zipBlob = await zip.generateAsync({ type: 'blob' });
+    } else {
+      built = await buildOutputWorkbook(results.map(function (r) {
+        return { name: r.sheetName, headers: r.headers, rows: r.rows };
+      }));
+    }
+    results.forEach(function (r) {
       var one = fillCounts(r.headers, r.rows);
       r.truncatedCells = one.cells;
       r.truncatedRows = one.rows;
     });
     state.workbook = built;
+    state.zipBlob = zipBlob;
     state.results = results;
     renderResults();
     setStatus('');
@@ -1017,22 +1088,24 @@ async function mergeGroup(group) {
   var addSrc = optSource.checked;
   var headers, rows;
 
-  if (group.union) {
-    /* 并集模式：按文件顺序首见原则收集所有表头 */
+  if (group.byName) {
+    /* 按列名对齐：文件顺序里先见到的列在前，同名列只取第一次 */
     headers = [];
     var globalIdx = new Map();
     group.files.forEach(function (f) {
       f.header.forEach(function (h) {
         var k = normKey(h);
-        if (!globalIdx.has(k)) { globalIdx.set(k, headers.length); headers.push(k); }
+        if (!k || globalIdx.has(k)) return;
+        globalIdx.set(k, headers.length);
+        headers.push(k);
       });
     });
     rows = [];
     group.files.forEach(function (f) {
-      var local = new Map(); // 该文件内 表头key → 本地列号（重名取首个）
+      var local = new Map();
       f.header.forEach(function (h, i) {
         var k = normKey(h);
-        if (!local.has(k)) local.set(k, i);
+        if (k && !local.has(k)) local.set(k, i);
       });
       f.dataRows.forEach(function (r) {
         var out = new Array(headers.length).fill(null);
@@ -1042,7 +1115,6 @@ async function mergeGroup(group) {
       });
     });
   } else {
-    /* 分组模式：组内表头一致（规范化后），按位置一一对应 */
     headers = group.files[0].header.map(function (h) { return h == null ? '' : String(h); });
     rows = [];
     group.files.forEach(function (f) {
@@ -1055,7 +1127,7 @@ async function mergeGroup(group) {
     });
   }
 
-  var finalHeaders = addSrc ? headers.concat([t('sourceCol')]) : headers.slice();
+  var finalHeaders = addSrc ? headers.concat([sourceColumnName(headers)]) : headers.slice();
 
   return {
     headers: finalHeaders,
@@ -1223,9 +1295,13 @@ function renderResults() {
     b.addEventListener('click', async function () {
       var i = parseInt(b.getAttribute('data-dl'), 10);
       if (state.stale) return;
-      var one = await buildOutputWorkbook([{ name: rs[i].sheetName, headers: rs[i].headers, rows: rs[i].rows }]);
-      var name = (rs[i].sheetName || t('sheetName')) + '.xlsx';
-      downloadBlob(one.blob, sanitizeFilename(name));
+      var name = rs[i].name || ((rs[i].sheetName || t('sheetName')) + '.xlsx');
+      var blob = rs[i].blob;
+      if (!blob) {
+        var one = await buildOutputWorkbook([{ name: rs[i].sheetName, headers: rs[i].headers, rows: rs[i].rows }]);
+        blob = one.blob;
+      }
+      downloadBlob(blob, sanitizeFilename(name));
       toast(t('toastDlOne', { name: name }), 'ok');
     });
   });
@@ -1244,10 +1320,30 @@ function downloadBlob(blob, filename) {
 }
 
 async function downloadAll() {
-  if (!state.results || !state.workbook || state.stale || state.merging) return;
-  var name = workbookName();
-  downloadBlob(state.workbook.blob, name);
-  toast(t('toastDlOne', { name: name }), 'ok');
+  if (!state.results || state.stale || state.merging) return;
+  if (mergeMode() === '3') {
+    if (!state.zipBlob) return;
+    var name = workbookName().replace(/\.xlsx$/i, '') + '.zip';
+    downloadBlob(state.zipBlob, name);
+    toast(t('toastDlOne', { name: name }), 'ok');
+    return;
+  }
+  if (!state.workbook) return;
+  var one = workbookName();
+  downloadBlob(state.workbook.blob, one);
+  toast(t('toastDlOne', { name: one }), 'ok');
+}
+
+function groupFileName(result, used) {
+  var custom = nameInput.value.trim();
+  var base = custom
+    ? sanitizeFilename(custom).replace(/\.xlsx$/i, '')
+    : (result.defaultBase || result.sheetName || t('fallbackBase'));
+  if (base.length > 80) base = base.slice(0, 80);
+  var name = base + '.xlsx', n = 2;
+  while (used[name]) { name = base.slice(0, 76) + '_' + (n++) + '.xlsx'; }
+  used[name] = true;
+  return name;
 }
 
 function workbookName() {
@@ -1303,9 +1399,14 @@ function bindEvents() {
     b.addEventListener('click', function () { setLang(b.getAttribute('data-setlang')); });
   });
 
-  optUnion.addEventListener('change', function () {
-    cardUnion.classList.toggle('on', optUnion.checked);
-    invalidateResults();
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="mergeMode"]'), function (el) {
+    el.addEventListener('change', function () {
+      ['cardMode1', 'cardMode2', 'cardMode3'].forEach(function (id) {
+        var card = $(id);
+        if (card) card.classList.toggle('on', card.querySelector('input').checked);
+      });
+      invalidateResults();
+    });
   });
   optSource.addEventListener('change', function () {
     cardSource.classList.toggle('on', optSource.checked);
