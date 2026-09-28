@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Excel Batch Merge Tool</title>
+<!-- ExcelJS：用于读写 .xlsx（含批注写入）；JSZip：用于解压上传的 zip 压缩包 -->
+<script>
+/* CDN 加载器：主源失败自动切换备用源 */
+window._loadScript = function (urls) {
+  return new Promise(function (resolve, reject) {
+    var tryNext = function (i) {
+      if (i >= urls.length) { reject(new Error('全部源加载失败：' + urls.join(', '))); return; }
+      var s = document.createElement('script');
+      s.src = urls[i];
+      s.onload = function () { resolve(urls[i]); };
+      s.onerror = function () { s.remove(); tryNext(i + 1); };
+      document.head.appendChild(s);
+    };
+    tryNext(0);
+  });
+};
+</script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --primary-soft: #eef2ff;
+    --primary-border: #c7d2fe;
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --text: #1f2937;
+    --text-2: #6b7280;
+    --text-3: #9ca3af;
+    --ok: #16a34a;
+    --ok-soft: #f0fdf4;
+    --ok-border: #bbf7d0;
+    --warn: #d97706;
+    --warn-soft: #fffbeb;
+    --warn-border: #fde68a;
+    --err: #dc2626;
+    --err-soft: #fef2f2;
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 28px 16px 60px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+
+  /* ---------- 顶部 ---------- */
+  header.app { margin-bottom: 20px; }
+  .app-title { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .app-title .logo {
+    width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #4f46e5);
+    display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; font-weight: 700;
+  }
+  .app-sub { color: var(--text-2); margin-top: 6px; font-size: 13px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--primary);
+    background: var(--primary-soft); border: 1px solid var(--primary-border);
+    padding: 2px 10px; border-radius: 999px; font-weight: 500;
+  }
+  .lang-switch {
+    margin-left: auto; display: inline-flex; align-items: stretch;
+    border: 1px solid var(--border); border-radius: 999px; overflow: hidden;
+    background: #fff; flex: none;
+  }
+  .lang-switch button {
+    border: none; background: none; cursor: pointer; padding: 4px 14px;
+    font-size: 12.5px; font-weight: 600; color: var(--text-2); font-family: inherit;
+    transition: background .15s, color .15s;
+  }
+  .lang-switch button:hover { background: #f3f4f6; color: var(--text); }
+  .lang-switch button.on { background: var(--primary); color: #fff; }
+
+  /* ---------- 卡片与步骤 ---------- */
+  section.card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05); padding: 20px 22px; margin-bottom: 18px;
+  }
+  .step-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .step-no {
+    width: 26px; height: 26px; border-radius: 50%; background: var(--primary); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: none;
+  }
+  .step-title { font-size: 16px; font-weight: 700; }
+  .step-desc { color: var(--text-2); font-size: 12.5px; margin-top: 2px; }
+
+  /* ---------- 上传区 ---------- */
+  .dropzone {
+    border: 2px dashed var(--primary-border); border-radius: 12px; padding: 34px 20px;
+    text-align: center; cursor: pointer; transition: background .15s, border-color .15s;
+    background: #fafbff; user-select: none;
+  }
+  .dropzone:hover, .dropzone.drag { border-color: var(--primary); background: var(--primary-soft); }
+  .dropzone .dz-icon { font-size: 30px; margin-bottom: 6px; }
+  .dropzone .dz-main { font-size: 15px; font-weight: 600; }
+  .dropzone .dz-sub { color: var(--text-2); font-size: 12.5px; margin-top: 4px; }
+  .dropzone.disabled { opacity: .55; pointer-events: none; }
+
+  #statusLine { display: none; align-items: center; gap: 8px; margin-top: 12px; color: var(--text-2); font-size: 13px; }
+  #statusLine.show { display: flex; }
+  .spinner {
+    width: 14px; height: 14px; border: 2px solid var(--primary-border); border-top-color: var(--primary);
+    border-radius: 50%; animation: spin .7s linear infinite; flex: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- 文件列表 ---------- */
+  .file-table-wrap { overflow-x: auto; }
+  table.files { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.files th {
+    text-align: left; color: var(--text-2); font-weight: 600; font-size: 12px;
+    padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  table.files td { padding: 8px 10px; border-bottom: 1px solid #f1f2f4; vertical-align: top; }
+  table.files tr:last-child td { border-bottom: none; }
+  td.idx { color: var(--text-3); width: 30px; }
+  td.fname { font-weight: 600; word-break: break-all; max-width: 220px; }
+  td.src { color: var(--text-2); font-size: 12px; word-break: break-all; max-width: 240px; }
+  td.cnt { white-space: nowrap; color: var(--text-2); }
+  td.prev { color: var(--text-2); font-size: 12px; max-width: 260px; word-break: break-all; }
+  td.st { white-space: nowrap; }
+  .st-ok { color: var(--ok); font-weight: 600; }
+  .st-err { color: var(--err); font-weight: 600; }
+  .st-load { color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; }
+  tr.err-row td { background: var(--err-soft); }
+  .btn-remove {
+    border: none; background: none; color: var(--text-3); cursor: pointer; font-size: 15px;
+    padding: 2px 8px; border-radius: 6px; line-height: 1.4;
+  }
+  .btn-remove:hover { color: var(--err); background: var(--err-soft); }
+  .empty-hint { color: var(--text-3); text-align: center; padding: 18px 0 6px; font-size: 13px; }
+
+  /* ---------- 选项 ---------- */
+  .opt-list { display: flex; flex-direction: column; gap: 10px; }
+  label.opt-card {
+    display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px;
+    border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  label.opt-card:hover { border-color: var(--primary-border); }
+  label.opt-card.on { border-color: var(--primary); background: var(--primary-soft); }
+  label.opt-card input { display: none; }
+  .opt-box {
+    width: 18px; height: 18px; border: 2px solid #cbd5e1; border-radius: 5px; flex: none;
+    margin-top: 2px; position: relative; transition: .15s; background: #fff;
+  }
+  label.opt-card.on .opt-box { background: var(--primary); border-color: var(--primary); }
+  .opt-box::after {
+    content: ""; position: absolute; left: 4px; top: 0px; width: 5px; height: 10px;
+    border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); opacity: 0;
+  }
+  label.opt-card.on .opt-box::after { opacity: 1; }
+  .opt-title { font-weight: 600; display: block; }
+  .opt-desc { color: var(--text-2); font-size: 12.5px; display: block; margin-top: 2px; }
+
+  .name-row { margin-top: 16px; }
+  .name-row label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 13.5px; }
+  .name-input {
+    width: 100%; max-width: 480px; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 14px; font-family: inherit; outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  .name-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
+
+  /* ---------- 按钮 ---------- */
+  .actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    padding: 10px 22px; border-radius: 9px; border: none; cursor: pointer;
+    font-size: 15px; font-weight: 600; font-family: inherit;
+    transition: background .15s, transform .05s, opacity .15s;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+  .btn-secondary {
+    background: #fff; color: var(--primary); border: 1.5px solid var(--primary);
+  }
+  .btn-secondary:hover:not(:disabled) { background: var(--primary-soft); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.small { padding: 6px 14px; font-size: 13px; border-radius: 7px; }
+  .dl-hint { color: var(--text-2); font-size: 12.5px; }
+
+  /* ---------- 结果 ---------- */
+  .summary-line { color: var(--text-2); font-size: 13px; margin-bottom: 12px; }
+  .summary-line b { color: var(--text); }
+  .notice {
+    display: flex; gap: 10px; padding: 10px 14px; border-radius: 9px; font-size: 13px;
+    margin-bottom: 12px; align-items: flex-start;
+  }
+  .notice.warn { background: var(--warn-soft); border: 1px solid var(--warn-border); color: #92400e; }
+  .notice.ok { background: var(--ok-soft); border: 1px solid var(--ok-border); color: #166534; }
+  .group-card { border: 1px solid var(--border); border-radius: 11px; padding: 14px 16px; margin-bottom: 12px; }
+  .group-card:last-child { margin-bottom: 0; }
+  .group-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .group-name { font-weight: 700; font-size: 14.5px; word-break: break-all; }
+  .group-meta { color: var(--text-2); font-size: 12.5px; margin-top: 3px; }
+  .group-meta .warn-txt { color: var(--warn); font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip {
+    background: #f3f4f6; border: 1px solid var(--border); color: var(--text-2);
+    border-radius: 999px; padding: 2px 10px; font-size: 12px; max-width: 300px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .group-prev { color: var(--text-3); font-size: 12px; margin-top: 8px; word-break: break-all; }
+
+  /* ---------- toast ---------- */
+  #toasts { position: fixed; right: 18px; bottom: 18px; display: flex; flex-direction: column; gap: 10px; z-index: 99; }
+  .toast {
+    background: #111827; color: #fff; border-radius: 9px; padding: 10px 16px;
+    font-size: 13px; max-width: 380px; box-shadow: 0 4px 16px rgba(0,0,0,.25);
+    animation: toastIn .25s ease; word-break: break-all;
+  }
+  .toast.ok { background: #065f46; }
+  .toast.warn { background: #92400e; }
+  .toast.error { background: #991b1b; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- 库加载失败横幅 ---------- */
+  #libErr {
+    display: none; background: var(--err-soft); border: 1px solid #fecaca; color: #991b1b;
+    padding: 12px 16px; border-radius: 11px; margin-bottom: 18px; font-size: 13px;
+  }
+
+  footer.app { text-align: center; color: var(--text-3); font-size: 12px; margin-top: 26px; line-height: 1.9; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="app">
+    <div class="app-title">
+      <span class="logo">M</span>
+      <span data-i18n="appTitle">Excel 批量合并工具</span>
+      <span class="badge" data-i18n="badge">🔒 本地处理 · 数据不上传</span>
+      <div class="lang-switch" id="langSwitch" title="Interface language / 界面语言">
+        <button type="button" data-setlang="zh">中文</button>
+        <button type="button" data-setlang="en">EN</button>
+      </div>
+    </div>
+    <div class="app-sub" data-i18n="appSub">上传 → 配置 → 合并 → 下载。支持多个 .xlsx 与 .zip 压缩包（自动解压，含多级文件夹），仅读取每个文件的第一个工作表。</div>
+  </header>
+
+  <div id="libErr" data-i18n="libErr">⚠️ Excel 处理库（ExcelJS / JSZip）加载失败，请检查网络后刷新页面重试。</div>
+
+  <!-- ① 上传 -->
+  <section class="card">
+    <div class="step-head">
+      <span class="step-no">1</span>
+      <div>
+        <div class="step-title" data-i18n="s1Title">上传文件</div>
+        <div class="step-desc" data-i18n="s1Desc">可一次性多选上传，也可逐个多次上传，全部选完后再开始合并</div>
+      </div>
+    </div>
+    <div class="dropzone" id="dropzone">
+      <div class="dz-icon">📄</div>
+      <div class="dz-main" data-i18n="dzMain">拖拽 .xlsx / .zip 文件到此处，或点击选择文件</div>
+      <div class="dz-sub" data-i18n="dzSub">表头完全相同的文件将自动合并；zip 压缩包会自动解压（支持多级文件夹，仅处理其中的 .xlsx）</div>
+    </div>
+    <input type="file" id="fileInput" accept=".xlsx,.zip" multiple style="display:none">
+    <div id="statusLine"><span class="spinner"></span><span id="statusText"></span></div>
+
+    <div class="file-table-wrap" id="fileTableWrap" style="margin-top:14px">
+      <table class="files" id="fileTable" style="display:none">
+        <thead>
+          <tr>
+            <th class="idx">#</th>
+            <th data-i18n="thFile">文件名</th>
+            <th data-i18n="thSource">来源</th>
+            <th data-i18n="thRows">数据行</th>
+            <th data-i18n="thCols">列数</th>
+            <th data-i18n="thHeader">表头（前几列）</th>
+            <th data-i18n="thStatus">状态</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="fileTbody"></tbody>
+      </table>
+      <div class="empty-hint" id="emptyHint" data-i18n="emptyHint">尚未上传文件——拖拽或点击上方区域上传</div>
+    </div>
+  </section>
+
+  <!-- ② 配置 -->
+  <section class="card">
+    <div class="step-head">
+      <span class="step-no">2</span>
+      <div>
+        <div class="step-title" data-i18n="s2Title">合并配置</div>
+        <div class="step-desc" data-i18n="s2Desc">按需开启以下选项（均为可选）</div>
+      </div>
+    </div>
+    <div class="opt-list">
+      <label class="opt-card" id="cardUnion">
+        <input type="checkbox" id="optUnion">
+        <span class="opt-box"></span>
+        <span>
+          <span class="opt-title" data-i18n="optUnionTitle">按表头并集合并</span>
+          <span class="opt-desc" data-i18n="optUnionDesc">不要求各文件表头完全一致：以所有文件表头的并集为准合并为一个文件，各文件缺失的单元格留空</span>
+        </span>
+      </label>
+      <label class="opt-card" id="cardSource">
+        <input type="checkbox" id="optSource">
+        <span class="opt-box"></span>
+        <span>
+          <span class="opt-title" data-i18n="optSourceTitle">在合并表格最后一列填充源文件名</span>
+          <span class="opt-desc" data-i18n="optSourceDesc">合并结果最后追加一列"源文件名"，值为每条数据所属源 Excel 的纯文件名（不含 .xlsx 后缀；zip 内嵌套文件夹也不带文件夹路径）</span>
+        </span>
+      </label>
+    </div>
+    <div class="name-row">
+      <label for="nameInput" data-i18n="nameLabel">合并文件名（可选，留空则默认用源文件名拼接）</label>
+      <input type="text" class="name-input" id="nameInput" data-i18n-ph="namePhDefault" placeholder="默认使用源文件名拼接（如：文件A_文件B.xlsx）" autocomplete="off">
+    </div>
+  </section>
+
+  <!-- ③ 合并与下载 -->
+  <section class="card">
+    <div class="step-head">
+      <span class="step-no">3</span>
+      <div>
+        <div class="step-title" data-i18n="s3Title">合并与下载</div>
+        <div class="step-desc" data-i18n="s3Desc">开始合并后，可在旁边直接下载 Excel（表头不同的文件会分组分别合并、分别下载）</div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="btnMerge" data-i18n="btnMerge" disabled>开始合并</button>
+      <button class="btn btn-secondary" id="btnDownload" data-i18n="btnDownload" disabled>下载 Excel</button>
+      <span class="dl-hint" id="dlHint"></span>
+    </div>
+  </section>
+
+  <!-- 合并结果 -->
+  <section class="card" id="resultCard" style="display:none">
+    <div class="step-head">
+      <span class="step-no" style="background:var(--ok)">✓</span>
+      <div>
+        <div class="step-title" data-i18n="resTitle">合并结果</div>
+        <div class="step-desc" id="resultSummary"></div>
+      </div>
+    </div>
+    <div id="resultBody"></div>
+  </section>
+
+  <footer class="app">
+    <span data-i18n="footer1">所有处理均在浏览器本地完成，文件不会上传到任何服务器。</span><br>
+    <span data-i18n="footer2">单元格文本超过 Excel 单元格上限（32767 字符）时将自动截断并以"..."结尾，同时在相应单元格添加批注"文本超长已截断"；仅提供 Excel（.xlsx）下载。</span>
+  </footer>
+
+</div>
+<div id="toasts"></div>
+
+<script>
+'use strict';
+
+/* ===================== i18n ===================== */
+var I18N = {
+  zh: {
+    docTitle: 'Excel 批量合并工具',
+    appTitle: 'Excel 批量合并工具',
+    badge: '🔒 本地处理 · 数据不上传',
+    appSub: '上传 → 配置 → 合并 → 下载。支持多个 .xlsx 与 .zip 压缩包（自动解压，含多级文件夹），仅读取每个文件的第一个工作表。',
+    libErr: '⚠️ Excel 处理库（ExcelJS / JSZip）加载失败，请检查网络后刷新页面重试。',
+
+    s1Title: '上传文件',
+    s1Desc: '可一次性多选上传，也可逐个多次上传，全部选完后再开始合并',
+    dzMain: '拖拽 .xlsx / .zip 文件到此处，或点击选择文件',
+    dzSub: '表头完全相同的文件将自动合并；zip 压缩包会自动解压（支持多级文件夹，仅处理其中的 .xlsx）',
+    thFile: '文件名', thSource: '来源', thRows: '数据行', thCols: '列数', thHeader: '表头（前几列）', thStatus: '状态',
+    emptyHint: '尚未上传文件——拖拽或点击上方区域上传',
+
+    s2Title: '合并配置',
+    s2Desc: '按需开启以下选项（均为可选）',
+    optUnionTitle: '按表头并集合并',
+    optUnionDesc: '不要求各文件表头完全一致：以所有文件表头的并集为准合并为一个文件，各文件缺失的单元格留空',
+    optSourceTitle: '在合并表格最后一列填充源文件名',
+    optSourceDesc: '合并结果最后追加一列"源文件名"，值为每条数据所属源 Excel 的纯文件名（不含 .xlsx 后缀；zip 内嵌套文件夹也不带文件夹路径）',
+    nameLabel: '合并文件名（可选，留空则默认用源文件名拼接）',
+    namePhDefault: '默认使用源文件名拼接（如：文件A_文件B.xlsx）',
+    namePhSingle: '默认：{name}.xlsx',
+    namePhGroups: '默认：各组分别以组内源文件名拼接命名（共 {n} 组）',
+
+    s3Title: '合并与下载',
+    s3Desc: '开始合并后，可在旁边直接下载 Excel（表头不同的文件会分组分别合并、分别下载）',
+    btnMerge: '开始合并',
+    btnMerging: '合并中…',
+    btnDownload: '下载 Excel',
+    dlHintMulti: '共 {n} 个文件，将依次下载（浏览器可能请求允许多文件下载）',
+
+    resTitle: '合并结果',
+    resSummary: '共 {g} 个合并文件 · {f} 个源文件 · {r} 行数据',
+    staleNotice: '⚠️ 文件或配置已发生变化，以下合并结果已失效——请重新点击"开始合并"。',
+    truncNotice: '⚠️ 共有 <b>{cells}</b> 个单元格文本超过 Excel 单元格长度上限（32767 字符），已截断并以"..."结尾（涉及 {rows} 行数据）；相应单元格已添加批注"文本超长已截断"。',
+    noTruncNotice: '✅ 未发生文本超长截断。',
+    groupMeta: '{f} 个文件 · {r} 行数据 · {c} 列',
+    groupTruncCells: '{n} 个单元格截断',
+    btnDownloadGroup: '下载本组',
+    groupHeaderPrefix: '表头：',
+    headerColsMore: '…共 {n} 列',
+    groupHeaderColsMore: '…（共 {n} 列）',
+
+    loading: '读取中',
+    ready: '✓ 就绪',
+    sourceDirect: '直接上传',
+    rowsUnit: ' 行',
+    colsUnit: ' 列',
+    removeFile: '移除该文件',
+    listSep: '、',
+    moreSuffix: ' 等',
+
+    statusReading: '正在读取：{name}',
+    statusUnzipping: '正在解压：{name}',
+    statusReadingN: '正在读取 {i}/{n}：{name}',
+    statusMerging: '正在合并第 {i}/{n} 组（{f} 个文件，{r} 行）…',
+
+    toastIgnored: '已忽略 {n} 个不支持的文件（仅支持 .xlsx / .zip）：{names}',
+    toastReadFail: '读取文件失败：{name}',
+    toastReadInnerFail: '读取压缩包内文件失败：{name}',
+    toastZipFail: '压缩包解压失败：{name}（{msg}）',
+    toastNoXlsx: '「{name}」中没有找到 .xlsx 文件{extra}',
+    toastNoXlsxExtra: '（其中 {n} 个非 .xlsx 表格文件已忽略）',
+    toastOtherExcel: '压缩包中 {n} 个非 .xlsx 表格文件已忽略（仅支持 .xlsx）',
+    toastAdded: '已添加 {n} 个 Excel 文件，可继续上传或开始合并',
+    toastNeedFiles: '请先上传有效的 Excel 文件',
+    toastMerged: '合并完成：共生成 {n} 个合并文件',
+    toastMergeFail: '合并失败：{msg}',
+    toastDlOne: '已开始下载「{name}」',
+    toastDlMulti: '已开始下载 {n} 个合并文件（若浏览器询问，请选择"允许多个文件下载"）',
+
+    errNoSheet: '文件中没有工作表',
+    errEmptySheet: '第一个工作表为空',
+    errNotXlsx: '无法解析（可能不是有效的 .xlsx 文件）',
+    errParseFail: '解析失败：{msg}',
+    errUnknown: '未知错误',
+
+    fallbackBase: '合并结果',
+    sheetName: '合并结果',
+    sourceCol: '源文件名',
+    truncNote: '文本超长已截断',
+
+    footer1: '所有处理均在浏览器本地完成，文件不会上传到任何服务器。',
+    footer2: '单元格文本超过 Excel 单元格上限（32767 字符）时将自动截断并以"..."结尾，同时在相应单元格添加批注"文本超长已截断"；仅提供 Excel（.xlsx）下载。'
+  },
+  en: {
+    docTitle: 'Excel Batch Merge Tool',
+    appTitle: 'Excel Batch Merge Tool',
+    badge: '🔒 Runs locally · Files never uploaded',
+    appSub: 'Upload → Configure → Merge → Download. Supports multiple .xlsx files and .zip archives (auto-extracted, nested folders included); only the first worksheet of each file is read.',
+    libErr: '⚠️ Failed to load Excel libraries (ExcelJS / JSZip). Check your network and refresh the page.',
+
+    s1Title: 'Upload Files',
+    s1Desc: 'Select several files at once, or add them one by one — start merging once you are done',
+    dzMain: 'Drag .xlsx / .zip files here, or click to browse',
+    dzSub: 'Files with identical headers are merged automatically; .zip archives are extracted (nested folders supported, .xlsx only)',
+    thFile: 'File', thSource: 'Source', thRows: 'Rows', thCols: 'Cols', thHeader: 'Header (first columns)', thStatus: 'Status',
+    emptyHint: 'No files yet — drag files onto the area above, or click to browse',
+
+    s2Title: 'Merge Options',
+    s2Desc: 'Toggle the options you need (all optional)',
+    optUnionTitle: 'Merge by union of headers',
+    optUnionDesc: 'Headers do not need to match exactly: all files are merged into one using the union of every header; cells a file does not have are left empty',
+    optSourceTitle: 'Append source file name as the last column',
+    optSourceDesc: 'Appends a "Source File" column containing the plain file name of the Excel each row came from (no .xlsx extension, no folder path for files inside zips)',
+    nameLabel: 'Merged file name (optional — leave empty to join source file names)',
+    namePhDefault: 'Defaults to joining source file names (e.g. FileA_FileB.xlsx)',
+    namePhSingle: 'Default: {name}.xlsx',
+    namePhGroups: 'Default: each group is named by joining its source file names ({n} groups)',
+
+    s3Title: 'Merge & Download',
+    s3Desc: 'After merging, download the Excel right next to the Merge button (files with different headers are merged group by group)',
+    btnMerge: 'Merge',
+    btnMerging: 'Merging…',
+    btnDownload: 'Download Excel',
+    dlHintMulti: '{n} files will be downloaded one by one (the browser may ask to allow multiple downloads)',
+
+    resTitle: 'Results',
+    resSummary: '{g} merged files · {f} source files · {r} rows',
+    staleNotice: '⚠️ Files or options have changed — the results below are stale. Click "Merge" again.',
+    truncNotice: '⚠️ <b>{cells}</b> cells exceeded the Excel cell character limit (32,767) and were truncated with a trailing "..." ({rows} rows affected); a "Text too long, truncated" comment was added to those cells.',
+    noTruncNotice: '✅ No text was truncated.',
+    groupMeta: '{f} files · {r} rows · {c} columns',
+    groupTruncCells: '{n} cells truncated',
+    btnDownloadGroup: 'Download group',
+    groupHeaderPrefix: 'Header: ',
+    headerColsMore: '…{n} cols in total',
+    groupHeaderColsMore: '…({n} columns in total)',
+
+    loading: 'Reading',
+    ready: '✓ Ready',
+    sourceDirect: 'Direct upload',
+    rowsUnit: ' rows',
+    colsUnit: ' cols',
+    removeFile: 'Remove this file',
+    listSep: ', ',
+    moreSuffix: ' …',
+
+    statusReading: 'Reading: {name}',
+    statusUnzipping: 'Extracting: {name}',
+    statusReadingN: 'Reading {i}/{n}: {name}',
+    statusMerging: 'Merging group {i}/{n} ({f} files, {r} rows)…',
+
+    toastIgnored: 'Ignored {n} unsupported files (.xlsx / .zip only): {names}',
+    toastReadFail: 'Failed to read file: {name}',
+    toastReadInnerFail: 'Failed to read a file inside the archive: {name}',
+    toastZipFail: 'Failed to extract archive: {name} ({msg})',
+    toastNoXlsx: 'No .xlsx files found in "{name}"{extra}',
+    toastNoXlsxExtra: ' ({n} non-xlsx spreadsheet files inside were ignored)',
+    toastOtherExcel: '{n} non-xlsx spreadsheet files in the archive were ignored (.xlsx only)',
+    toastAdded: 'Added {n} Excel files — keep uploading, or start merging',
+    toastNeedFiles: 'Upload at least one valid Excel file first',
+    toastMerged: 'Done: {n} merged files generated',
+    toastMergeFail: 'Merge failed: {msg}',
+    toastDlOne: 'Downloading "{name}"',
+    toastDlMulti: 'Downloading {n} merged files (allow multiple downloads if the browser asks)',
+
+    errNoSheet: 'No worksheets in the file',
+    errEmptySheet: 'The first worksheet is empty',
+    errNotXlsx: 'Cannot parse (the file may not be a valid .xlsx)',
+    errParseFail: 'Parse failed: {msg}',
+    errUnknown: 'unknown error',
+
+    fallbackBase: 'Merged',
+    sheetName: 'Merged',
+    sourceCol: 'Source File',
+    truncNote: 'Text too long, truncated',
+
+    footer1: 'All processing happens locally in your browser — files are never uploaded to any server.',
+    footer2: 'Cell text exceeding the Excel cell limit (32,767 characters) is truncated and ends with "..."; a "Text too long, truncated" comment is added to the affected cells. Excel (.xlsx) download only.'
+  }
+};
+
+/* 当前语言：默认英文；用户手动切换过的选择（localStorage）优先 */
+var lang = 'en';
+try {
+  var _saved = localStorage.getItem('excelmerge.lang');
+  if (_saved === 'en' || _saved === 'zh') lang = _saved;
+} catch (e) { /* localStorage 不可用时忽略 */ }
+
+/* 取词：缺失键回退中文，再回退键名本身 */
+function t(key, params) {
+  var dict = I18N[lang] || I18N.zh;
+  var s = (dict[key] != null) ? dict[key] : I18N.zh[key];
+  if (s == null) return key;
+  if (params) {
+    Object.keys(params).forEach(function (k) {
+      s = s.split('{' + k + '}').join(String(params[k]));
+    });
+  }
+  return s;
+}
+
+/* 将静态 DOM 的 data-i18n / data-i18n-ph 词典应用到界面 */
+function applyStaticI18n() {
+  document.title = t('docTitle');
+  document.documentElement.lang = (lang === 'en') ? 'en' : 'zh-CN';
+  Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function (el) {
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-ph]'), function (el) {
+    el.setAttribute('placeholder', t(el.getAttribute('data-i18n-ph')));
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-setlang]'), function (b) {
+    b.classList.toggle('on', b.getAttribute('data-setlang') === lang);
+  });
+}
+
+/* 切换语言：静态文案 + 动态区域全部重渲染。
+   输出文件内容（批注/源文件列/工作表名）与语言相关 → 已有合并结果标记失效。 */
+function setLang(l) {
+  if (lang === l) return;
+  lang = l;
+  try { localStorage.setItem('excelmerge.lang', l); } catch (e) { /* ignore */ }
+  applyStaticI18n();
+  renderFiles();
+  if (state.results) { state.stale = true; renderResults(); }
+  updatePlaceholder();
+  updateButtons();
+}
+
+/* ===================== 常量与状态 ===================== */
+var CELL_LIMIT = 32767;          // Excel 单元格字符上限
+
+var state = {
+  files: [],        // { id, name(显示名), basename(无后缀), source, status: loading|ok|error, header, dataRows, error }
+  results: null,    // 合并结果 [{ name, blob, defaultBase, files, rowCount, headerCount, truncatedCells, truncatedRows, headerPreview }]
+  stale: false,     // 文件或配置变化后，已有结果失效
+  merging: false,
+  fileSeq: 0
+};
+
+/* DOM 引用 */
+var $ = function (id) { return document.getElementById(id); };
+var dropzone = $('dropzone'), fileInput = $('fileInput'), fileTable = $('fileTable'), fileTbody = $('fileTbody'), emptyHint = $('emptyHint');
+var statusLine = $('statusLine'), statusText = $('statusText');
+var optUnion = $('optUnion'), optSource = $('optSource'), cardUnion = $('cardUnion'), cardSource = $('cardSource');
+var nameInput = $('nameInput');
+var btnMerge = $('btnMerge'), btnDownload = $('btnDownload'), dlHint = $('dlHint');
+var resultCard = $('resultCard'), resultSummary = $('resultSummary'), resultBody = $('resultBody');
+
+/* ===================== 工具函数 ===================== */
+function tick() { return new Promise(function (r) { setTimeout(r, 0); }); }
+function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function toast(msg, type) {
+  var tEl = document.createElement('div');
+  tEl.className = 'toast ' + (type || 'ok');
+  tEl.textContent = msg;
+  $('toasts').appendChild(tEl);
+  setTimeout(function () {
+    tEl.style.transition = 'opacity .3s'; tEl.style.opacity = '0';
+    setTimeout(function () { tEl.remove(); }, 320);
+  }, 3800);
+}
+function setStatus(text) {
+  if (text) { statusText.textContent = text; statusLine.classList.add('show'); }
+  else { statusLine.classList.remove('show'); }
+}
+/* 表头规范化 key：null→''，转字符串并去首尾空白 */
+function normKey(h) { return h == null ? '' : String(h).trim(); }
+function headerKey(header) {
+  return JSON.stringify(header.map(normKey));
+}
+/* 去除行尾部的空单元格 */
+function trimTrailingEmpty(arr) {
+  var end = arr.length;
+  while (end > 0 && (arr[end - 1] === null || arr[end - 1] === undefined || arr[end - 1] === '')) end--;
+  return arr.slice(0, end);
+}
+/* ExcelJS 各种单元格值 → 纯值（string / number / boolean / null） */
+function normalizeCellValue(v) {
+  if (v === null || v === undefined) return null;
+  if (v instanceof Date) return formatDate(v);
+  var tv = typeof v;
+  if (tv === 'string' || tv === 'number' || tv === 'boolean') return v;
+  if (typeof v === 'object') {
+    if (Array.isArray(v.richText)) return v.richText.map(function (r) { return r.text || ''; }).join('');
+    if ('result' in v) return normalizeCellValue(v.result);
+    if ('text' in v) return v.text;
+    if ('error' in v) return v.error;
+    if ('formula' in v || 'sharedFormula' in v) return null;
+    return String(v);
+  }
+  return String(v);
+}
+function formatDate(d) {
+  /* ExcelJS 读出的日期按 UTC 语义构造，须用 UTC getter 还原原表显示值（避免时区偏移） */
+  var p = function (n) { return String(n).padStart(2, '0'); };
+  var date = d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate());
+  if (d.getUTCHours() || d.getUTCMinutes() || d.getUTCSeconds()) {
+    return date + ' ' + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ':' + p(d.getUTCSeconds());
+  }
+  return date;
+}
+/* 超长截断：总长不超过 limit，结尾加"..."，并避免切断 UTF-16 代理对 */
+function truncWithEllipsis(s, limit) {
+  var cut = limit - 3;
+  var out = s.slice(0, cut);
+  var code = out.charCodeAt(out.length - 1);
+  if (code >= 0xD800 && code <= 0xDBFF) out = out.slice(0, -1); // 末尾是孤立的高位代理，回退一位
+  return out + '...';
+}
+/* 文件名净化（Windows 非法字符） */
+function sanitizeFilename(s) {
+  return s.replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').replace(/^\.+/, '').trim();
+}
+/* 显示宽度（中文按 2） */
+function dispW(s) {
+  var w = 0;
+  for (var i = 0; i < s.length && w < 60; i++) w += s.charCodeAt(i) > 0xFF ? 2 : 1;
+  return Math.min(w, 60);
+}
+function basenameNoExt(name) { return name.replace(/\.xlsx$/i, ''); }
+
+/* ===================== xlsx 解析 ===================== */
+async function parseXlsxBuffer(buf) {
+  var wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buf);
+  var ws = null;
+  for (var i = 0; i < wb.worksheets.length; i++) {
+    if (wb.worksheets[i].state !== 'hidden') { ws = wb.worksheets[i]; break; }
+  }
+  if (!ws && wb.worksheets.length) ws = wb.worksheets[0];
+  if (!ws) throw new Error(t('errNoSheet'));
+
+  var rows = [];
+  ws.eachRow({ includeEmpty: false }, function (row) {
+    var vals = [];
+    var has = false;
+    row.eachCell({ includeEmpty: false }, function (cell, col) {
+      var v = normalizeCellValue(cell.value);
+      vals[col - 1] = v;
+      if (v !== null && v !== undefined && v !== '') has = true;
+    });
+    if (!has) return;
+    // 稀疏数组补洞
+    for (var j = 0; j < vals.length; j++) if (vals[j] === undefined) vals[j] = null;
+    rows.push(trimTrailingEmpty(vals));
+  });
+  if (!rows.length) throw new Error(t('errEmptySheet'));
+  return { header: rows[0], dataRows: rows.slice(1) };
+}
+
+function friendlyError(e) {
+  var msg = (e && e.message) ? String(e.message) : '';
+  if (/zip|end of central|corrupt/i.test(msg)) return t('errNotXlsx');
+  return t('errParseFail', { msg: msg.slice(0, 120) || t('errUnknown') });
+}
+
+/* ===================== 上传处理 ===================== */
+async function handleFiles(fileList) {
+  var arr = Array.prototype.slice.call(fileList);
+  if (!arr.length) return;
+  var xlsxFiles = [], zipFiles = [], ignored = [];
+  arr.forEach(function (f) {
+    var n = f.name;
+    if (/\.zip$/i.test(n)) zipFiles.push(f);
+    else if (/\.xlsx$/i.test(n)) xlsxFiles.push(f);
+    else ignored.push(n);
+  });
+  if (ignored.length) {
+    var shown = ignored.slice(0, 3).join(t('listSep')) + (ignored.length > 3 ? t('moreSuffix') : '');
+    toast(t('toastIgnored', { n: ignored.length, names: shown }), 'warn');
+  }
+
+  for (var i = 0; i < xlsxFiles.length; i++) {
+    var f = xlsxFiles[i];
+    setStatus(t('statusReading', { name: f.name }));
+    await tick();
+    var buf;
+    try { buf = await f.arrayBuffer(); }
+    catch (e) { toast(t('toastReadFail', { name: f.name }), 'error'); continue; }
+    await addXlsxBuffer(buf, f.name, null);
+  }
+  for (var j = 0; j < zipFiles.length; j++) {
+    await addZip(zipFiles[j]);
+  }
+  setStatus('');
+  updateButtons();
+  var okCount = state.files.filter(function (f) { return f.status === 'ok'; }).length;
+  if (okCount) toast(t('toastAdded', { n: okCount }), 'ok');
+}
+
+async function addXlsxBuffer(buf, displayName, sourceLabel) {
+  var entry = {
+    id: ++state.fileSeq,
+    name: displayName,
+    basename: basenameNoExt(displayName),
+    source: sourceLabel || null,   /* null = 直接上传，渲染时按当前语言显示 */
+    status: 'loading', header: null, dataRows: [], error: null
+  };
+  state.files.push(entry);
+  renderFiles();
+  try {
+    var parsed = await parseXlsxBuffer(buf);
+    entry.header = parsed.header;
+    entry.dataRows = parsed.dataRows;
+    entry.status = 'ok';
+  } catch (e) {
+    entry.status = 'error';
+    entry.error = friendlyError(e);
+    console.error('Parse failed: ' + displayName, e);
+  }
+  renderFiles();
+  invalidateResults();
+}
+
+async function addZip(zipFile) {
+  var zipName = zipFile.name;
+  setStatus(t('statusUnzipping', { name: zipName }));
+  await tick();
+  var buf;
+  try { buf = await zipFile.arrayBuffer(); }
+  catch (e) { toast(t('toastReadFail', { name: zipName }), 'error'); return; }
+  var zip;
+  try { zip = await JSZip.loadAsync(buf); }
+  catch (e) { toast(t('toastZipFail', { name: zipName, msg: e.message || '' }), 'error'); return; }
+
+  var xlsxEntries = [], otherExcel = 0;
+  zip.forEach(function (path, zEntry) {
+    if (zEntry.dir) return;
+    var segs = path.split('/');
+    var base = segs[segs.length - 1];
+    if (!base) return;
+    if (segs.indexOf('__MACOSX') >= 0) return;      // macOS 垃圾目录
+    if (base.charAt(0) === '.') return;             // .DS_Store 等隐藏文件
+    if (segs.some(function (s) { return s.charAt(0) === '.'; })) return;
+    if (base.charAt(0) === '~') return;             // Office 临时文件 ~$xxx
+    if (/\.xlsx$/i.test(base)) xlsxEntries.push({ path: path, zEntry: zEntry, base: base });
+    else if (/\.(xls|xlsm|csv)$/i.test(base)) otherExcel++;
+  });
+
+  if (!xlsxEntries.length) {
+    var extra = otherExcel ? t('toastNoXlsxExtra', { n: otherExcel }) : '';
+    toast(t('toastNoXlsx', { name: zipName, extra: extra }), 'warn');
+    return;
+  }
+  for (var i = 0; i < xlsxEntries.length; i++) {
+    var e = xlsxEntries[i];
+    setStatus(t('statusReadingN', { i: i + 1, n: xlsxEntries.length, name: e.base }));
+    await tick();
+    var innerBuf;
+    try { innerBuf = await e.zEntry.async('arraybuffer'); }
+    catch (err) { toast(t('toastReadInnerFail', { name: e.path }), 'error'); continue; }
+    await addXlsxBuffer(innerBuf, e.base, zipName + ' ▸ ' + e.path);
+  }
+  if (otherExcel) toast(t('toastOtherExcel', { n: otherExcel }), 'warn');
+}
+
+/* ===================== 渲染 ===================== */
+function renderFiles() {
+  var files = state.files;
+  emptyHint.style.display = files.length ? 'none' : '';
+  fileTable.style.display = files.length ? '' : 'none';
+  var html = '';
+  files.forEach(function (f, i) {
+    var stHtml, cls = '';
+    if (f.status === 'loading') stHtml = '<span class="st-load"><span class="spinner"></span>' + esc(t('loading')) + '</span>';
+    else if (f.status === 'ok') stHtml = '<span class="st-ok">' + esc(t('ready')) + '</span>';
+    else { stHtml = '<span class="st-err" title="' + esc(f.error) + '">✗ ' + esc(f.error) + '</span>'; cls = ' class="err-row"'; }
+    var headerPrev = '';
+    if (f.status === 'ok' && f.header) {
+      var cols = f.header.slice(0, 8).map(function (h) { return h == null ? '' : String(h); });
+      var full = f.header.map(function (h) { return h == null ? '' : String(h); }).join(t('listSep'));
+      var txt = cols.join(t('listSep'));
+      if (txt.length > 60) txt = txt.slice(0, 60) + '…';
+      headerPrev = '<span title="' + esc(full) + '">' + esc(txt) + '</span>' +
+        (f.header.length > 8 ? '<span style="color:var(--text-3)"> ' + esc(t('headerColsMore', { n: f.header.length })) + '</span>' : '');
+    }
+    html += '<tr' + cls + '>' +
+      '<td class="idx">' + (i + 1) + '</td>' +
+      '<td class="fname">' + esc(f.name) + '</td>' +
+      '<td class="src">' + esc(sourceLabelOf(f.source)) + '</td>' +
+      '<td class="cnt">' + (f.status === 'ok' ? f.dataRows.length + esc(t('rowsUnit')) : '—') + '</td>' +
+      '<td class="cnt">' + (f.status === 'ok' && f.header ? f.header.length + esc(t('colsUnit')) : '—') + '</td>' +
+      '<td class="prev">' + headerPrev + '</td>' +
+      '<td class="st">' + stHtml + '</td>' +
+      '<td><button class="btn-remove" data-id="' + f.id + '" title="' + esc(t('removeFile')) + '">✕</button></td>' +
+      '</tr>';
+  });
+  fileTbody.innerHTML = html;
+  Array.prototype.forEach.call(fileTbody.querySelectorAll('.btn-remove'), function (b) {
+    b.addEventListener('click', function () {
+      var id = parseInt(b.getAttribute('data-id'), 10);
+      state.files = state.files.filter(function (f) { return f.id !== id; });
+      renderFiles();
+      invalidateResults();
+      updateButtons();
+    });
+  });
+}
+
+function okFiles() { return state.files.filter(function (f) { return f.status === 'ok'; }); }
+
+/* 来源显示：zip 内文件显示 zip名▸路径；直接上传按当前语言显示 */
+function sourceLabelOf(source) { return source || t('sourceDirect'); }
+
+function groupCountFor(files) {
+  if (optUnion.checked) return 1;
+  var keys = new Set();
+  files.forEach(function (f) { keys.add(headerKey(f.header)); });
+  return keys.size;
+}
+
+function defaultBaseFor(files) {
+  var names = [], seen = new Set();
+  files.forEach(function (f) {
+    if (!seen.has(f.basename)) { seen.add(f.basename); names.push(f.basename); }
+  });
+  var base = names.join('_');
+  if (base.length > 120) base = base.slice(0, 120);
+  return base || t('fallbackBase');
+}
+
+function updatePlaceholder() {
+  var files = okFiles();
+  if (!files.length) {
+    nameInput.placeholder = t('namePhDefault');
+    return;
+  }
+  if (optUnion.checked || groupCountFor(files) === 1) {
+    nameInput.placeholder = t('namePhSingle', { name: defaultBaseFor(files) });
+  } else {
+    nameInput.placeholder = t('namePhGroups', { n: groupCountFor(files) });
+  }
+}
+
+function invalidateResults() {
+  if (state.results) {
+    state.stale = true;
+    renderResults();
+  }
+  updatePlaceholder();
+  updateButtons();
+}
+
+function updateButtons() {
+  var files = okFiles();
+  btnMerge.disabled = state.merging || !files.length;
+  var canDownload = !state.merging && state.results && !state.stale && state.results.length > 0;
+  btnDownload.disabled = !canDownload;
+  if (canDownload && state.results.length > 1) {
+    dlHint.textContent = t('dlHintMulti', { n: state.results.length });
+  } else {
+    dlHint.textContent = '';
+  }
+}
+
+/* ===================== 合并 ===================== */
+function buildGroups(files) {
+  if (optUnion.checked) return [{ files: files, union: true }];
+  var map = new Map(), order = [];
+  files.forEach(function (f) {
+    var key = headerKey(f.header);
+    if (!map.has(key)) { var g = { files: [], union: false }; map.set(key, g); order.push(g); }
+    map.get(key).files.push(f);
+  });
+  return order;
+}
+
+async function startMerge() {
+  if (state.merging) return;
+  var files = okFiles();
+  if (!files.length) { toast(t('toastNeedFiles'), 'warn'); return; }
+
+  state.merging = true;
+  state.stale = false;
+  btnMerge.disabled = true;
+  btnMerge.textContent = t('btnMerging');
+  btnDownload.disabled = true;
+  await tick();
+
+  try {
+    var groups = buildGroups(files);
+    var results = [];
+    for (var gi = 0; gi < groups.length; gi++) {
+      setStatus(t('statusMerging', {
+        i: gi + 1, n: groups.length,
+        f: groups[gi].files.length,
+        r: groups[gi].files.reduce(function (s, f) { return s + f.dataRows.length; }, 0)
+      }));
+      await tick();
+      var r = await mergeGroup(groups[gi]);
+      results.push(r);
+    }
+    state.results = results;
+    renderResults();
+    setStatus('');
+    toast(t('toastMerged', { n: results.length }), 'ok');
+  } catch (e) {
+    console.error(e);
+    setStatus('');
+    toast(t('toastMergeFail', { msg: (e && e.message) || e }), 'error');
+  } finally {
+    state.merging = false;
+    btnMerge.textContent = t('btnMerge');
+    updateButtons();
+  }
+}
+
+async function mergeGroup(group) {
+  var addSrc = optSource.checked;
+  var headers, rows;
+
+  if (group.union) {
+    /* 并集模式：按文件顺序首见原则收集所有表头 */
+    headers = [];
+    var globalIdx = new Map();
+    group.files.forEach(function (f) {
+      f.header.forEach(function (h) {
+        var k = normKey(h);
+        if (!globalIdx.has(k)) { globalIdx.set(k, headers.length); headers.push(k); }
+      });
+    });
+    rows = [];
+    group.files.forEach(function (f) {
+      var local = new Map(); // 该文件内 表头key → 本地列号（重名取首个）
+      f.header.forEach(function (h, i) {
+        var k = normKey(h);
+        if (!local.has(k)) local.set(k, i);
+      });
+      f.dataRows.forEach(function (r) {
+        var out = new Array(headers.length).fill(null);
+        local.forEach(function (li, k) { out[globalIdx.get(k)] = r[li] == null ? null : r[li]; });
+        if (addSrc) out.push(f.basename);
+        rows.push(out);
+      });
+    });
+  } else {
+    /* 分组模式：组内表头一致（规范化后），按位置一一对应 */
+    headers = group.files[0].header.map(function (h) { return h == null ? '' : String(h); });
+    rows = [];
+    group.files.forEach(function (f) {
+      f.dataRows.forEach(function (r) {
+        var out = new Array(headers.length).fill(null);
+        for (var i = 0; i < Math.min(headers.length, r.length); i++) out[i] = r[i];
+        if (addSrc) out.push(f.basename);
+        rows.push(out);
+      });
+    });
+  }
+
+  var finalHeaders = addSrc ? headers.concat([t('sourceCol')]) : headers.slice();
+  var built = await buildOutputWorkbook(finalHeaders, rows);
+
+  return {
+    blob: built.blob,
+    truncatedCells: built.truncatedCells,
+    truncatedRows: built.truncatedRows,
+    rowCount: rows.length,
+    headerCount: finalHeaders.length,
+    files: group.files.map(function (f) { return { name: f.name, basename: f.basename, source: f.source }; }),
+    defaultBase: defaultBaseFor(group.files),
+    headerPreview: finalHeaders.slice(0, 10).map(function (h) { return h == null ? '' : String(h); })
+  };
+}
+
+/* 生成输出 workbook：截断 + 批注 + 表头样式 + 列宽 + 冻结首行 */
+async function buildOutputWorkbook(headers, rows) {
+  var wb = new ExcelJS.Workbook();
+  var ws = wb.addWorksheet(t('sheetName'), { views: [{ state: 'frozen', ySplit: 1 }] });
+
+  /* 表头行 */
+  var hRow = ws.addRow(headers);
+  hRow.height = 22;
+  hRow.eachCell({ includeEmpty: true }, function (cell) {
+    cell.font = { bold: true, color: { argb: 'FF312E81' }, size: 11 };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E7FF' } };
+    cell.alignment = { vertical: 'middle' };
+    cell.border = { bottom: { style: 'thin', color: { argb: 'FF818CF8' } } };
+  });
+
+  /* 数据行：先做超长截断（记录位置），再批量写入 */
+  var data = [];
+  var truncMarks = [];
+  var truncRowSet = new Set();
+  for (var ri = 0; ri < rows.length; ri++) {
+    var src = rows[ri];
+    var out = new Array(src.length);
+    for (var ci = 0; ci < src.length; ci++) {
+      var v = src[ci];
+      if (typeof v === 'string' && v.length > CELL_LIMIT) {
+        v = truncWithEllipsis(v, CELL_LIMIT);
+        truncMarks.push([ri, ci]);
+        truncRowSet.add(ri);
+      }
+      out[ci] = v;
+    }
+    data.push(out);
+  }
+  ws.addRows(data);
+
+  /* 给被截断的单元格加批注 */
+  for (var tm = 0; tm < truncMarks.length; tm++) {
+    var pos = truncMarks[tm];
+    ws.getRow(pos[0] + 2).getCell(pos[1] + 1).note = t('truncNote');
+  }
+
+  /* 列宽（按表头 + 前 200 行内容采样） */
+  var widths = headers.map(function (h) { return dispW(String(h == null ? '' : h)); });
+  var sample = Math.min(data.length, 200);
+  for (var s = 0; s < sample; s++) {
+    var r = data[s];
+    for (var c = 0; c < r.length; c++) {
+      var vv = r[c];
+      if (typeof vv === 'string') widths[c] = Math.max(widths[c], dispW(vv));
+      else if (typeof vv === 'number') widths[c] = Math.max(widths[c], String(vv).length);
+    }
+  }
+  for (var w = 0; w < widths.length; w++) {
+    try { ws.getColumn(w + 1).width = Math.min(Math.max(widths[w] + 3, 10), 60); } catch (e) { /* ignore */ }
+  }
+
+  var buf = await wb.xlsx.writeBuffer();
+  var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  return { blob: blob, truncatedCells: truncMarks.length, truncatedRows: truncRowSet.size };
+}
+
+/* ===================== 结果渲染 ===================== */
+function computeResultNames() {
+  var custom = nameInput.value.trim();
+  var used = new Set();
+  return state.results.map(function (r, gi) {
+    var base;
+    if (custom) {
+      base = sanitizeFilename(custom).replace(/\.xlsx$/i, '');
+      if (state.results.length > 1) base += '_' + (gi + 1);
+    } else {
+      base = r.defaultBase;
+    }
+    if (!base) base = t('fallbackBase');
+    var name = base + '.xlsx', n = 2;
+    while (used.has(name)) name = base + '_' + (n++) + '.xlsx';
+    used.add(name);
+    return name;
+  });
+}
+
+function renderResults() {
+  if (!state.results) { resultCard.style.display = 'none'; return; }
+  resultCard.style.display = '';
+
+  var rs = state.results;
+  var names = computeResultNames();
+  rs.forEach(function (r, i) { r.name = names[i]; });
+
+  var totalFiles = 0, totalRows = 0, totalTruncCells = 0, totalTruncRows = 0;
+  rs.forEach(function (r) {
+    totalFiles += r.files.length; totalRows += r.rowCount;
+    totalTruncCells += r.truncatedCells; totalTruncRows += r.truncatedRows;
+  });
+  resultSummary.textContent = t('resSummary', { g: rs.length, f: totalFiles, r: totalRows });
+
+  var html = '';
+  if (state.stale) {
+    html += '<div class="notice warn">' + esc(t('staleNotice')) + '</div>';
+  }
+  if (totalTruncCells > 0) {
+    html += '<div class="notice warn">' + t('truncNotice', { cells: totalTruncCells, rows: totalTruncRows }) + '</div>';
+  } else {
+    html += '<div class="notice ok">' + esc(t('noTruncNotice')) + '</div>';
+  }
+
+  rs.forEach(function (r, i) {
+    var chips = r.files.map(function (f) {
+      return '<span class="chip" title="' + esc(sourceLabelOf(f.source)) + '">' + esc(f.basename) + '</span>';
+    }).join('');
+    var prev = r.headerPreview.join(t('listSep'));
+    if (r.headerCount > r.headerPreview.length) prev += ' ' + t('groupHeaderColsMore', { n: r.headerCount });
+    html += '<div class="group-card">' +
+      '<div class="group-head">' +
+      '<div>' +
+      '<div class="group-name">' + esc(r.name) + '</div>' +
+      '<div class="group-meta">' + esc(t('groupMeta', { f: r.files.length, r: r.rowCount, c: r.headerCount })) +
+      (r.truncatedCells ? ' · <span class="warn-txt">' + esc(t('groupTruncCells', { n: r.truncatedCells })) + '</span>' : '') + '</div>' +
+      '</div>' +
+      '<button class="btn btn-secondary small" data-dl="' + i + '"' + (state.stale ? ' disabled' : '') + '>' + esc(t('btnDownloadGroup')) + '</button>' +
+      '</div>' +
+      '<div class="chips">' + chips + '</div>' +
+      '<div class="group-prev">' + esc(t('groupHeaderPrefix')) + esc(prev) + '</div>' +
+      '</div>';
+  });
+  resultBody.innerHTML = html;
+
+  Array.prototype.forEach.call(resultBody.querySelectorAll('[data-dl]'), function (b) {
+    b.addEventListener('click', function () {
+      var i = parseInt(b.getAttribute('data-dl'), 10);
+      if (state.stale) return;
+      downloadBlob(rs[i].blob, rs[i].name);
+      toast(t('toastDlOne', { name: rs[i].name }), 'ok');
+    });
+  });
+}
+
+/* ===================== 下载 ===================== */
+function downloadBlob(blob, filename) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+}
+
+async function downloadAll() {
+  if (!state.results || state.stale || state.merging) return;
+  var rs = state.results;
+  for (var i = 0; i < rs.length; i++) {
+    downloadBlob(rs[i].blob, rs[i].name);
+    if (i < rs.length - 1) await sleep(400);
+  }
+  if (rs.length > 1) toast(t('toastDlMulti', { n: rs.length }), 'ok');
+  else toast(t('toastDlOne', { name: rs[0].name }), 'ok');
+}
+
+/* ===================== 事件绑定 ===================== */
+function bindEvents() {
+  dropzone.addEventListener('click', function () { fileInput.click(); });
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files && fileInput.files.length) handleFiles(fileInput.files);
+    fileInput.value = '';
+  });
+
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    dropzone.addEventListener(ev, function (e) { e.preventDefault(); e.stopPropagation(); dropzone.classList.add('drag'); });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    dropzone.addEventListener(ev, function (e) { e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('drag'); });
+  });
+  dropzone.addEventListener('drop', function (e) {
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+  });
+
+  /* 阻止页面级拖拽误导航 */
+  ['dragover', 'drop'].forEach(function (ev) {
+    window.addEventListener(ev, function (e) { e.preventDefault(); });
+  });
+
+  /* 语言切换 */
+  Array.prototype.forEach.call(document.querySelectorAll('[data-setlang]'), function (b) {
+    b.addEventListener('click', function () { setLang(b.getAttribute('data-setlang')); });
+  });
+
+  optUnion.addEventListener('change', function () {
+    cardUnion.classList.toggle('on', optUnion.checked);
+    invalidateResults();
+  });
+  optSource.addEventListener('change', function () {
+    cardSource.classList.toggle('on', optSource.checked);
+    invalidateResults();
+  });
+  nameInput.addEventListener('input', function () {
+    if (state.results && !state.stale) renderResults(); /* 仅刷新文件名显示，不需重新合并 */
+  });
+
+  btnMerge.addEventListener('click', startMerge);
+  btnDownload.addEventListener('click', downloadAll);
+}
+
+/* ===================== 初始化 ===================== */
+async function init() {
+  bindEvents();
+  applyStaticI18n();
+  renderFiles();
+  updateButtons();
+  updatePlaceholder();
+
+  var ok = true;
+  try {
+    if (typeof ExcelJS === 'undefined') {
+      await window._loadScript([
+        'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',
+        'https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js',
+        'https://registry.npmmirror.com/exceljs/4.4.0/files/dist/exceljs.min.js'
+      ]);
+    }
+  } catch (e) { ok = false; }
+  try {
+    if (typeof JSZip === 'undefined') {
+      await window._loadScript([
+        'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+        'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js',
+        'https://registry.npmmirror.com/jszip/3.10.1/files/dist/jszip.min.js'
+      ]);
+    }
+  } catch (e) { ok = false; }
+
+  if (!ok || typeof ExcelJS === 'undefined' || typeof JSZip === 'undefined') {
+    $('libErr').style.display = '';
+    $('libErr').textContent = t('libErr');
+    return;
+  }
+}
+init();
+</script>
+</body>
+</html>
