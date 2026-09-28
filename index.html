@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Excel Batch Merge Tool</title>
+<title>Free Excel Batch Merge Tool</title>
+<meta name="description" content="Free online tool to batch-merge Excel .xlsx files and zip archives in your browser. Files stay on your device and are never uploaded.">
+<link rel="canonical" href="https://caradavis952-art.github.io/excel-merge-pages/">
 <!-- ExcelJS：用于读写 .xlsx（含批注写入）；JSZip：用于解压上传的 zip 压缩包 -->
 <script>
 /* CDN 加载器：主源失败自动切换备用源 */
@@ -57,6 +59,7 @@ window._loadScript = function (urls) {
   /* ---------- 顶部 ---------- */
   header.app { margin-bottom: 20px; }
   .app-title { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .app-title h1 { font-size: 22px; font-weight: 700; line-height: 1.3; }
   .app-title .logo {
     width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #4f46e5);
     display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; font-weight: 700;
@@ -238,7 +241,7 @@ window._loadScript = function (urls) {
   <header class="app">
     <div class="app-title">
       <span class="logo">M</span>
-      <span data-i18n="appTitle">Excel 批量合并工具</span>
+      <h1 data-i18n="appTitle">Free Excel Batch Merge Tool</h1>
       <span class="badge" data-i18n="badge">🔒 本地处理 · 数据不上传</span>
       <div class="lang-switch" id="langSwitch" title="Interface language / 界面语言">
         <button type="button" data-setlang="zh">中文</button>
@@ -362,8 +365,9 @@ window._loadScript = function (urls) {
 /* ===================== i18n ===================== */
 var I18N = {
   zh: {
-    docTitle: 'Excel 批量合并工具',
-    appTitle: 'Excel 批量合并工具',
+    docTitle: '免费 Excel 批量合并工具',
+    appTitle: '免费 Excel 批量合并工具',
+    metaDesc: '免费在线批量合并 Excel（.xlsx）和 zip 压缩包，在浏览器本地处理，文件不会上传。',
     badge: '🔒 本地处理 · 数据不上传',
     appSub: '上传 → 配置 → 合并 → 下载。支持多个 .xlsx 与 .zip 压缩包（自动解压，含多级文件夹），仅读取每个文件的第一个工作表。',
     libErr: '⚠️ Excel 处理库（ExcelJS / JSZip）加载失败，请检查网络后刷新页面重试。',
@@ -448,8 +452,9 @@ var I18N = {
     footer2: '单元格文本超过 Excel 单元格上限（32767 字符）时将自动截断并以"..."结尾，同时在相应单元格添加批注"文本超长已截断"；仅提供 Excel（.xlsx）下载。'
   },
   en: {
-    docTitle: 'Excel Batch Merge Tool',
-    appTitle: 'Excel Batch Merge Tool',
+    docTitle: 'Free Excel Batch Merge Tool',
+    appTitle: 'Free Excel Batch Merge Tool',
+    metaDesc: 'Free online tool to batch-merge Excel .xlsx files and zip archives in your browser. Files stay on your device and are never uploaded.',
     badge: '🔒 Runs locally · Files never uploaded',
     appSub: 'Upload → Configure → Merge → Download. Supports multiple .xlsx files and .zip archives (auto-extracted, nested folders included); only the first worksheet of each file is read.',
     libErr: '⚠️ Failed to load Excel libraries (ExcelJS / JSZip). Check your network and refresh the page.',
@@ -558,6 +563,8 @@ function t(key, params) {
 /* 将静态 DOM 的 data-i18n / data-i18n-ph 词典应用到界面 */
 function applyStaticI18n() {
   document.title = t('docTitle');
+  var desc = document.querySelector('meta[name="description"]');
+  if (desc) desc.setAttribute('content', t('metaDesc'));
   document.documentElement.lang = (lang === 'en') ? 'en' : 'zh-CN';
   Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function (el) {
     el.textContent = t(el.getAttribute('data-i18n'));

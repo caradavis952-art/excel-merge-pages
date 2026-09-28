@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://caradavis952-art.github.io/excel-merge-pages/sitemap.xml
