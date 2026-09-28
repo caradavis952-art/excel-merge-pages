@@ -435,7 +435,8 @@ window._loadScript = function (urls) {
 
   <footer class="app">
     <span data-i18n="footer1">所有处理均在浏览器本地完成，文件不会上传到任何服务器。</span><br>
-    <span data-i18n="footer2">单元格文本超过 Excel 单元格上限（32767 字符）时将自动截断并以"..."结尾，同时在相应单元格添加批注"文本超长已截断"；仅提供 Excel（.xlsx）下载。</span>
+    <span data-i18n="footer2">单元格文本超过 Excel 单元格上限（32767 字符）时将自动截断并以"..."结尾，同时在相应单元格添加批注"文本超长已截断"；仅提供 Excel（.xlsx）下载。</span><br>
+    <span data-i18n="footerCopy">Copyright 2026 © Free Excel Batch Merge Tool. All rights reserved.</span>
   </footer>
 
 </div>
@@ -489,14 +490,17 @@ var I18N = {
     dlHintMulti: '共 {n} 个文件，将依次下载（浏览器可能请求允许多文件下载）',
 
     resTitle: '合并结果',
-    resSummary: '共 {g} 个工作表 · {f} 个源文件 · {r} 行数据',
+    resSummary: '1 个 Excel · {g} 个工作表 · {f} 个源文件 · {r} 行数据',
+    resSummary3: '1 个压缩包 · {g} 个 Excel · {f} 个源文件 · {r} 行数据',
     staleNotice: '⚠️ 文件或配置已发生变化，以下合并结果已失效——请重新点击"开始合并"。',
     truncNotice: '⚠️ 共有 <b>{cells}</b> 个单元格文本超过 Excel 单元格长度上限（32767 字符），已截断并以"..."结尾（涉及 {rows} 行数据）；相应单元格已添加批注"文本超长已截断"。',
     noTruncNotice: '✅ 未发生文本超长截断。',
     groupMeta: '{f} 个文件 · {r} 行数据 · {c} 列',
+    fileMeta: '{f} 个文件 · {r} 行数据 · {s} 个工作表',
     groupTruncCells: '{n} 个单元格截断',
     btnDownloadGroup: '仅下载此表',
     groupHeaderPrefix: '表头：',
+    sheetListPrefix: '工作表：',
     headerColsMore: '…共 {n} 列',
     groupHeaderColsMore: '…（共 {n} 列）',
 
@@ -541,6 +545,7 @@ var I18N = {
 
     footer1: '所有处理均在浏览器本地完成，文件不会上传到任何服务器。',
     footer2: '单元格文本超过 Excel 单元格上限（32767 字符）时将自动截断并以"..."结尾，同时在相应单元格添加批注"文本超长已截断"；仅提供 Excel（.xlsx）下载。',
+    footerCopy: 'Copyright 2026 © 免费 Excel 批量合并工具. All rights reserved.',
 
     faqTitle: '常见问题',
     faq1q: '只读取每个文件的哪一张表？',
@@ -607,14 +612,17 @@ var I18N = {
     dlHintMulti: '{n} files will be downloaded one by one (the browser may ask to allow multiple downloads)',
 
     resTitle: 'Results',
-    resSummary: '{g} sheets · {f} source files · {r} rows',
+    resSummary: '1 Excel · {g} sheets · {f} source files · {r} rows',
+    resSummary3: '1 zip · {g} Excel files · {f} source files · {r} rows',
     staleNotice: '⚠️ Files or options have changed — the results below are stale. Click "Merge" again.',
     truncNotice: '⚠️ <b>{cells}</b> cells exceeded the Excel cell character limit (32,767) and were truncated with a trailing "..." ({rows} rows affected); a "Text too long, truncated" comment was added to those cells.',
     noTruncNotice: '✅ No text was truncated.',
     groupMeta: '{f} files · {r} rows · {c} columns',
+    fileMeta: '{f} files · {r} rows · {s} sheets',
     groupTruncCells: '{n} cells truncated',
     btnDownloadGroup: 'Download this sheet only',
     groupHeaderPrefix: 'Header: ',
+    sheetListPrefix: 'Sheets: ',
     headerColsMore: '…{n} cols in total',
     groupHeaderColsMore: '…({n} columns in total)',
 
@@ -659,6 +667,7 @@ var I18N = {
 
     footer1: 'All processing happens locally in your browser — files are never uploaded to any server.',
     footer2: 'Cell text exceeding the Excel cell limit (32,767 characters) is truncated and ends with "..."; a "Text too long, truncated" comment is added to the affected cells. Excel (.xlsx) download only.',
+    footerCopy: 'Copyright 2026 © Free Excel Batch Merge Tool. All rights reserved.',
 
     faqTitle: 'Questions',
     faq1q: 'Which sheet of each file is read?',
@@ -1376,43 +1385,32 @@ function renderResults() {
     totalFiles += r.files.length; totalRows += r.rowCount;
     totalTruncCells += r.truncatedCells; totalTruncRows += r.truncatedRows;
   });
-  resultSummary.textContent = t('resSummary', { g: rs.length, f: totalFiles, r: totalRows });
+  var mode = mergeMode();
+  resultSummary.textContent = t(mode === '3' ? 'resSummary3' : 'resSummary', { g: rs.length, f: totalFiles, r: totalRows });
 
   var html = '';
-  if (state.stale) {
-    html += '<div class="notice warn">' + esc(t('staleNotice')) + '</div>';
-  }
-  if (totalTruncCells > 0) {
-    html += '<div class="notice warn">' + t('truncNotice', { cells: totalTruncCells, rows: totalTruncRows }) + '</div>';
-  } else {
-    html += '<div class="notice ok">' + esc(t('noTruncNotice')) + '</div>';
-  }
+  if (state.stale) html += '<div class="notice warn">' + esc(t('staleNotice')) + '</div>';
+  html += totalTruncCells > 0
+    ? '<div class="notice warn">' + t('truncNotice', { cells: totalTruncCells, rows: totalTruncRows }) + '</div>'
+    : '<div class="notice ok">' + esc(t('noTruncNotice')) + '</div>';
 
-  rs.forEach(function (r, i) {
-    var chips = r.files.map(function (f) {
-      return '<span class="chip" title="' + esc(sourceLabelOf(f.source)) + '">' + esc(f.basename) + '</span>';
-    }).join('');
-    var prev = r.headerPreview.join(t('listSep'));
-    if (r.headerCount > r.headerPreview.length) prev += ' ' + t('groupHeaderColsMore', { n: r.headerCount });
-    html += '<div class="group-card">' +
-      '<div class="group-head">' +
-      '<div>' +
-      '<div class="group-name">' + esc(r.sheetName || r.name) + '</div>' +
-      '<div class="group-meta">' + esc(t('groupMeta', { f: r.files.length, r: r.rowCount, c: r.headerCount })) +
-      (r.truncatedCells ? ' · <span class="warn-txt">' + esc(t('groupTruncCells', { n: r.truncatedCells })) + '</span>' : '') + '</div>' +
-      '</div>' +
-      '<button class="btn btn-secondary small" data-dl="' + i + '"' + (state.stale ? ' disabled' : '') + '>' + esc(t('btnDownloadGroup')) + '</button>' +
-      '</div>' +
-      '<div class="chips">' + chips + '</div>' +
-      '<div class="group-prev">' + esc(t('groupHeaderPrefix')) + esc(prev) + '</div>' +
-      '</div>';
-  });
+  if (mode === '3') {
+    rs.forEach(function (r, i) { html += resultCardHtml(r, i, r.name || r.sheetName); });
+  } else {
+    html += resultCardHtml({
+      files: rs.reduce(function (all, r) { return all.concat(r.files); }, []),
+      rowCount: totalRows,
+      headerCount: rs.length,
+      headerPreview: rs.map(function (r) { return r.sheetName; }),
+      truncatedCells: totalTruncCells
+    }, -1, workbookName());
+  }
   resultBody.innerHTML = html;
 
   Array.prototype.forEach.call(resultBody.querySelectorAll('[data-dl]'), function (b) {
     b.addEventListener('click', async function () {
       var i = parseInt(b.getAttribute('data-dl'), 10);
-      if (state.stale) return;
+      if (state.stale || i < 0) return;
       var name = rs[i].name || ((rs[i].sheetName || t('sheetName')) + '.xlsx');
       var blob = rs[i].blob;
       if (!blob) {
@@ -1423,6 +1421,27 @@ function renderResults() {
       toast(t('toastDlOne', { name: name }), 'ok');
     });
   });
+}
+
+function resultCardHtml(r, index, title) {
+  var chips = r.files.map(function (f) {
+    return '<span class="chip" title="' + esc(sourceLabelOf(f.source)) + '">' + esc(f.basename) + '</span>';
+  }).join('');
+  var prev = r.headerPreview.join(t('listSep'));
+  if (r.headerCount > r.headerPreview.length) prev += ' ' + t('groupHeaderColsMore', { n: r.headerCount });
+  var prefix = mergeMode() === '3' ? t('groupHeaderPrefix') : t('sheetListPrefix');
+  var dl = index < 0 ? '' : '<button class="btn btn-secondary small" data-dl="' + index + '"' + (state.stale ? ' disabled' : '') + '>' + esc(t('btnDownloadGroup')) + '</button>';
+  return '<div class="group-card">' +
+    '<div class="group-head"><div>' +
+    '<div class="group-name">' + esc(title) + '</div>' +
+    '<div class="group-meta">' + esc(mergeMode() === '3'
+      ? t('groupMeta', { f: r.files.length, r: r.rowCount, c: r.headerCount })
+      : t('fileMeta', { f: r.files.length, r: r.rowCount, s: r.headerCount })) +
+    (r.truncatedCells ? ' · <span class="warn-txt">' + esc(t('groupTruncCells', { n: r.truncatedCells })) + '</span>' : '') + '</div>' +
+    '</div>' + dl + '</div>' +
+    '<div class="chips">' + chips + '</div>' +
+    '<div class="group-prev">' + esc(prefix) + esc(prev) + '</div>' +
+    '</div>';
 }
 
 /* ===================== 下载 ===================== */
