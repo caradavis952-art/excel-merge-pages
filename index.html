@@ -107,6 +107,8 @@ window._loadScript = function (urls) {
   .dropzone .dz-main { font-size: 15px; font-weight: 600; }
   .dropzone .dz-sub { color: var(--text-2); font-size: 12.5px; margin-top: 4px; }
   .dropzone.disabled { opacity: .55; pointer-events: none; }
+  .sample-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .sample-hint { color: var(--text-2); font-size: 12.5px; }
 
   #statusLine { display: none; align-items: center; gap: 8px; margin-top: 12px; color: var(--text-2); font-size: 13px; }
   #statusLine.show { display: flex; }
@@ -268,6 +270,10 @@ window._loadScript = function (urls) {
       <div class="dz-sub" data-i18n="dzSub">表头完全相同的文件将自动合并；zip 压缩包会自动解压（支持多级文件夹，仅处理其中的 .xlsx）</div>
     </div>
     <input type="file" id="fileInput" accept=".xlsx,.zip" multiple style="display:none">
+    <div class="sample-row">
+      <button type="button" class="btn btn-secondary small" id="btnSample" data-i18n="btnSample">加载示例文件</button>
+      <span class="sample-hint" data-i18n="sampleHint">三份小表：两份表头相同，一份不同。用于直接试合并。</span>
+    </div>
     <div id="statusLine"><span class="spinner"></span><span id="statusText"></span></div>
 
     <div class="file-table-wrap" id="fileTableWrap" style="margin-top:14px">
@@ -376,6 +382,8 @@ var I18N = {
     s1Desc: '可一次性多选上传，也可逐个多次上传，全部选完后再开始合并',
     dzMain: '拖拽 .xlsx / .zip 文件到此处，或点击选择文件',
     dzSub: '表头完全相同的文件将自动合并；zip 压缩包会自动解压（支持多级文件夹，仅处理其中的 .xlsx）',
+    btnSample: '加载示例文件',
+    sampleHint: '三份小表：两份表头相同，一份不同。用于直接试合并。',
     thFile: '文件名', thSource: '来源', thRows: '数据行', thCols: '列数', thHeader: '表头（前几列）', thStatus: '状态',
     emptyHint: '尚未上传文件——拖拽或点击上方区域上传',
 
@@ -463,6 +471,8 @@ var I18N = {
     s1Desc: 'Select several files at once, or add them one by one — start merging once you are done',
     dzMain: 'Drag .xlsx / .zip files here, or click to browse',
     dzSub: 'Files with identical headers are merged automatically; .zip archives are extracted (nested folders supported, .xlsx only)',
+    btnSample: 'Load sample files',
+    sampleHint: 'Three small files: two share a header, one does not. Use them to try a merge.',
     thFile: 'File', thSource: 'Source', thRows: 'Rows', thCols: 'Cols', thHeader: 'Header (first columns)', thStatus: 'Status',
     emptyHint: 'No files yet — drag files onto the area above, or click to browse',
 
@@ -724,6 +734,26 @@ function friendlyError(e) {
 }
 
 /* ===================== 上传处理 ===================== */
+async function loadSamples() {
+  if (typeof ExcelJS === 'undefined') { toast(t('libErr'), 'error'); return; }
+  var samples = [
+    { name: 'people.xlsx', header: ['姓名', '年龄'], rows: [['甲', 1], ['乙', 2]] },
+    { name: 'more-people.xlsx', header: ['姓名', '年龄'], rows: [['丙', 3]] },
+    { name: 'cities.xlsx', header: ['城市', '邮编'], rows: [['成都', 610000]] }
+  ];
+  var files = [];
+  for (var i = 0; i < samples.length; i++) {
+    var s = samples[i];
+    var wb = new ExcelJS.Workbook();
+    var ws = wb.addWorksheet('Sheet1');
+    ws.addRow(s.header);
+    s.rows.forEach(function (r) { ws.addRow(r); });
+    var buf = await wb.xlsx.writeBuffer();
+    files.push(new File([buf], s.name, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  }
+  await handleFiles(files);
+}
+
 async function handleFiles(fileList) {
   var arr = Array.prototype.slice.call(fileList);
   if (!arr.length) return;
@@ -1246,6 +1276,8 @@ function fillCounts(headers, rows) {
 /* ===================== 事件绑定 ===================== */
 function bindEvents() {
   dropzone.addEventListener('click', function () { fileInput.click(); });
+  var btnSample = $('btnSample');
+  if (btnSample) btnSample.addEventListener('click', loadSamples);
   fileInput.addEventListener('change', function () {
     if (fileInput.files && fileInput.files.length) handleFiles(fileInput.files);
     fileInput.value = '';
