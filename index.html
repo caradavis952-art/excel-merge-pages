@@ -146,6 +146,12 @@ window._loadScript = function (urls) {
 
   /* ---------- 选项 ---------- */
   .opt-list { display: flex; flex-direction: column; gap: 10px; }
+  .opt-extra { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); }
+  .opt-extra-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .faq { display: flex; flex-direction: column; gap: 8px; }
+  .faq details { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+  .faq summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+  .faq p { margin: 8px 0 2px; color: var(--text-2); font-size: 13.5px; line-height: 1.6; }
   label.opt-card {
     display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px;
     border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
@@ -330,6 +336,9 @@ window._loadScript = function (urls) {
           <span class="opt-desc" data-i18n="mode3Desc">列名相同（不看顺序、不区分全角空格）的文件合成一个 Excel。主按钮下载一个压缩包，每组也可以单独下载。</span>
         </span>
       </label>
+    </div>
+    <div class="opt-extra">
+      <div class="opt-extra-title" data-i18n="extraTitle">附加选项</div>
       <label class="opt-card" id="cardSource">
         <input type="checkbox" id="optSource">
         <span class="opt-box"></span>
@@ -351,7 +360,7 @@ window._loadScript = function (urls) {
       <span class="step-no">3</span>
       <div>
         <div class="step-title" data-i18n="s3Title">合并与下载</div>
-        <div class="step-desc" data-i18n="s3Desc">开始合并后下载一个 Excel。表头相同的在同一个工作表，表头不同的各组各占一个新工作表。</div>
+        <div class="step-desc" id="s3Desc" data-i18n="s3Desc">开始合并后下载一个 Excel，每个源文件占一个工作表。</div>
       </div>
     </div>
     <div class="actions">
@@ -371,6 +380,57 @@ window._loadScript = function (urls) {
       </div>
     </div>
     <div id="resultBody"></div>
+  </section>
+
+  <section class="card" id="faqCard">
+    <div class="step-head">
+      <span class="step-no">?</span>
+      <div>
+        <div class="step-title" data-i18n="faqTitle">常见问题</div>
+      </div>
+    </div>
+    <div class="faq">
+      <details>
+        <summary data-i18n="faq1q">只读取每个文件的哪一张表？</summary>
+        <p data-i18n="faq1a">每个文件只读第一张未隐藏的工作表。隐藏表不会并进去。</p>
+      </details>
+      <details>
+        <summary data-i18n="faq2q">「表头相同」怎么判断？</summary>
+        <p data-i18n="faq2a">按列名的集合判断，不看顺序。首尾空格和全角空格会去掉。ID 和 id 仍是两列，不会并成一列。</p>
+      </details>
+      <details>
+        <summary data-i18n="faq3q">列的顺序怎么排？</summary>
+        <p data-i18n="faq3a">按文件先后。第一个文件的列保持原顺序，后面文件里新出现的列接在后面，不按字母排序。</p>
+      </details>
+      <details>
+        <summary data-i18n="faq4q">为什么有的日期少了 8 小时？</summary>
+        <p data-i18n="faq4a">不会。日期按表格里的显示值还原，不用电脑本地时区计算。</p>
+      </details>
+      <details>
+        <summary data-i18n="faq5q">格子里的字太长会怎样？</summary>
+        <p data-i18n="faq5a">超过 32767 个字符会截断，末尾加 ...，并在该格批注「文本超长已截断」。</p>
+      </details>
+      <details>
+        <summary data-i18n="faq6q">合并单元格怎么处理？</summary>
+        <p data-i18n="faq6a">只保留左上角的值，其余格子是空的。</p>
+      </details>
+      <details>
+        <summary data-i18n="faq7q">支持 .xls 或 csv 吗？</summary>
+        <p data-i18n="faq7a">不支持。只接受 .xlsx，以及里面含 .xlsx 的 .zip。其他格式会忽略并提示。</p>
+      </details>
+      <details>
+        <summary data-i18n="faq8q">空表会怎样？</summary>
+        <p data-i18n="faq8a">没有数据行的表会跳过，并提示这个文件无法合并。</p>
+      </details>
+      <details>
+        <summary data-i18n="faq9q">源文件名和已有列重名怎么办？</summary>
+        <p data-i18n="faq9a">新列改名为「源文件名_2」，原来那一列保持不动。</p>
+      </details>
+      <details>
+        <summary data-i18n="faq10q">文件很大会卡吗？</summary>
+        <p data-i18n="faq10a">全部在浏览器里处理。单个文件建议小于 20MB，更大的文件可能变慢或无响应。</p>
+      </details>
+    </div>
   </section>
 
   <footer class="app">
@@ -419,7 +479,10 @@ var I18N = {
     namePhGroups: '默认：各组分别以组内源文件名拼接命名（共 {n} 组）',
 
     s3Title: '合并与下载',
-    s3Desc: '开始合并后下载一个 Excel。表头相同的在同一个工作表，表头不同的各组各占一个新工作表。',
+    s3Desc: '开始合并后下载一个 Excel，每个源文件占一个工作表。',
+    s3Desc2: '开始合并后下载一个 Excel，所有文件合成一个工作表。',
+    s3Desc3: '开始合并后下载一个压缩包。表头相同的一组一个 Excel，每组也可以单独下载。',
+    extraTitle: '附加选项',
     btnMerge: '开始合并',
     btnMerging: '合并中…',
     btnDownload: '下载 Excel',
@@ -477,7 +540,29 @@ var I18N = {
     truncNote: '文本超长已截断',
 
     footer1: '所有处理均在浏览器本地完成，文件不会上传到任何服务器。',
-    footer2: '单元格文本超过 Excel 单元格上限（32767 字符）时将自动截断并以"..."结尾，同时在相应单元格添加批注"文本超长已截断"；仅提供 Excel（.xlsx）下载。'
+    footer2: '单元格文本超过 Excel 单元格上限（32767 字符）时将自动截断并以"..."结尾，同时在相应单元格添加批注"文本超长已截断"；仅提供 Excel（.xlsx）下载。',
+
+    faqTitle: '常见问题',
+    faq1q: '只读取每个文件的哪一张表？',
+    faq1a: '每个文件只读第一张未隐藏的工作表。隐藏表不会并进去。',
+    faq2q: '「表头相同」怎么判断？',
+    faq2a: '按列名的集合判断，不看顺序。首尾空格和全角空格会去掉。ID 和 id 仍是两列，不会并成一列。',
+    faq3q: '列的顺序怎么排？',
+    faq3a: '按文件先后。第一个文件的列保持原顺序，后面文件里新出现的列接在后面，不按字母排序。',
+    faq4q: '为什么有的日期少了 8 小时？',
+    faq4a: '不会。日期按表格里的显示值还原，不用电脑本地时区计算。',
+    faq5q: '格子里的字太长会怎样？',
+    faq5a: '超过 32767 个字符会截断，末尾加 ...，并在该格批注「文本超长已截断」。',
+    faq6q: '合并单元格怎么处理？',
+    faq6a: '只保留左上角的值，其余格子是空的。',
+    faq7q: '支持 .xls 或 csv 吗？',
+    faq7a: '不支持。只接受 .xlsx，以及里面含 .xlsx 的 .zip。其他格式会忽略并提示。',
+    faq8q: '空表会怎样？',
+    faq8a: '没有数据行的表会跳过，并提示这个文件无法合并。',
+    faq9q: '源文件名和已有列重名怎么办？',
+    faq9a: '新列改名为「源文件名_2」，原来那一列保持不动。',
+    faq10q: '文件很大会卡吗？',
+    faq10a: '全部在浏览器里处理。单个文件建议小于 20MB，更大的文件可能变慢或无响应。'
   },
   en: {
     docTitle: 'Free Excel Batch Merge Tool',
@@ -512,7 +597,10 @@ var I18N = {
     namePhGroups: 'Default: each group is named by joining its source file names ({n} groups)',
 
     s3Title: 'Merge & Download',
-    s3Desc: 'After merging, download one Excel. Matching headers share a sheet; each different header gets its own new sheet.',
+    s3Desc: 'After merging, download one Excel with one worksheet per source file.',
+    s3Desc2: 'After merging, download one Excel with every file combined into a single worksheet.',
+    s3Desc3: 'After merging, download a zip. Files with the same headers form one Excel, and each group can also be downloaded alone.',
+    extraTitle: 'Extra option',
     btnMerge: 'Merge',
     btnMerging: 'Merging…',
     btnDownload: 'Download Excel',
@@ -570,7 +658,29 @@ var I18N = {
     truncNote: 'Text too long, truncated',
 
     footer1: 'All processing happens locally in your browser — files are never uploaded to any server.',
-    footer2: 'Cell text exceeding the Excel cell limit (32,767 characters) is truncated and ends with "..."; a "Text too long, truncated" comment is added to the affected cells. Excel (.xlsx) download only.'
+    footer2: 'Cell text exceeding the Excel cell limit (32,767 characters) is truncated and ends with "..."; a "Text too long, truncated" comment is added to the affected cells. Excel (.xlsx) download only.',
+
+    faqTitle: 'Questions',
+    faq1q: 'Which sheet of each file is read?',
+    faq1a: 'Only the first visible worksheet. Hidden sheets are skipped.',
+    faq2q: 'What counts as the same header?',
+    faq2a: 'The set of column names, ignoring order. Leading, trailing, and full-width spaces are removed. ID and id stay as two columns.',
+    faq3q: 'How are columns ordered?',
+    faq3a: 'By file order. The first file keeps its column order; new columns from later files are appended. Columns are not sorted alphabetically.',
+    faq4q: 'Will dates shift by 8 hours?',
+    faq4a: 'No. Dates are restored as shown in the sheet, not by your computer’s local timezone.',
+    faq5q: 'What happens to very long text?',
+    faq5a: 'Text over 32,767 characters is cut, ends with ..., and the cell gets a note saying it was truncated.',
+    faq6q: 'How are merged cells handled?',
+    faq6a: 'Only the top-left cell keeps its value. The other cells in the merge are empty.',
+    faq7q: 'Are .xls or CSV files supported?',
+    faq7a: 'No. Only .xlsx files, and .zip archives that contain .xlsx files. Anything else is ignored with a notice.',
+    faq8q: 'What about an empty sheet?',
+    faq8a: 'A sheet with no data rows is skipped, and that file is marked as not merged.',
+    faq9q: 'What if a column is already named Source File?',
+    faq9a: 'The new column is named Source File_2. The original column is left as it is.',
+    faq10q: 'Will a large file freeze the page?',
+    faq10a: 'Everything runs in the browser. Keep each file under 20MB; larger files may slow down or stop responding.'
   }
 };
 
@@ -621,7 +731,15 @@ function setLang(l) {
   renderFiles();
   if (state.results) { state.stale = true; renderResults(); }
   updatePlaceholder();
+  updateModeHint();
   updateButtons();
+}
+
+function updateModeHint() {
+  var el = document.getElementById('s3Desc');
+  if (!el) return;
+  var mode = mergeMode();
+  el.textContent = mode === '2' ? t('s3Desc2') : mode === '3' ? t('s3Desc3') : t('s3Desc');
 }
 
 /* ===================== 常量与状态 ===================== */
@@ -1406,6 +1524,7 @@ function bindEvents() {
         if (card) card.classList.toggle('on', card.querySelector('input').checked);
       });
       invalidateResults();
+      updateModeHint();
     });
   });
   optSource.addEventListener('change', function () {
@@ -1424,6 +1543,7 @@ function bindEvents() {
 async function init() {
   bindEvents();
   applyStaticI18n();
+  updateModeHint();
   renderFiles();
   updateButtons();
   updatePlaceholder();
