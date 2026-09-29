@@ -14,6 +14,17 @@
 <title>Free Excel Batch Merge Tool</title>
 <meta name="description" content="Free online tool to batch-merge Excel .xlsx files and zip archives in your browser. Files stay on your device and are never uploaded.">
 <link rel="canonical" href="https://caradavis952-art.github.io/excel-merge-pages/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Free Excel Batch Merge Tool">
+<meta property="og:url" content="https://caradavis952-art.github.io/excel-merge-pages/">
+<meta property="og:title" content="Free Excel Batch Merge Tool">
+<meta property="og:description" content="Batch-merge Excel .xlsx files and zip archives in your browser. Files stay on your device and are never uploaded.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Free Excel Batch Merge Tool">
+<meta name="twitter:description" content="Batch-merge Excel .xlsx files and zip archives in your browser. Files stay on your device and are never uploaded.">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Free Excel Batch Merge Tool","url":"https://caradavis952-art.github.io/excel-merge-pages/","applicationCategory":"BusinessApplication","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Batch-merge Excel .xlsx files and zip archives in the browser. Files are not uploaded.","inLanguage":["en","zh-CN"]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Which sheet of each file is read?","acceptedAnswer":{"@type":"Answer","text":"Only the first visible worksheet of each file is read. Hidden sheets are skipped."}},{"@type":"Question","name":"What counts as the same header?","acceptedAnswer":{"@type":"Answer","text":"Headers match as a set, not by column order. Leading and trailing spaces are removed. ID and id stay separate columns."}},{"@type":"Question","name":"How are columns ordered?","acceptedAnswer":{"@type":"Answer","text":"Columns follow file order. The first file keeps its order, and new columns from later files are appended."}},{"@type":"Question","name":"Will dates shift by 8 hours?","acceptedAnswer":{"@type":"Answer","text":"No. Dates are restored from the displayed cell value, not recalculated with the computer time zone."}},{"@type":"Question","name":"What happens to very long text?","acceptedAnswer":{"@type":"Answer","text":"Text over 32,767 characters is truncated, ends with ..., and the cell gets a comment."}},{"@type":"Question","name":"How are merged cells handled?","acceptedAnswer":{"@type":"Answer","text":"Only the top-left value is kept. The other cells in the merged range are empty."}},{"@type":"Question","name":"Are .xls or CSV files supported?","acceptedAnswer":{"@type":"Answer","text":"No. Only .xlsx files, and .xlsx files inside .zip archives, are accepted."}},{"@type":"Question","name":"What about an empty sheet?","acceptedAnswer":{"@type":"Answer","text":"A sheet with no data rows is skipped, and the page says that file cannot be merged."}},{"@type":"Question","name":"What if a column is already named Source File?","acceptedAnswer":{"@type":"Answer","text":"The new column is named Source File_2. The original column is left as it is."}},{"@type":"Question","name":"Will a large file freeze the page?","acceptedAnswer":{"@type":"Answer","text":"Everything runs in the browser. Keep each file under 20MB; larger files may slow down or stop responding."}}]}]}
+</script>
 <!-- ExcelJS：用于读写 .xlsx（含批注写入）；JSZip：用于解压上传的 zip 压缩包 -->
 <script>
 /* CDN 加载器：主源失败自动切换备用源 */
@@ -444,8 +455,20 @@ window._loadScript = function (urls) {
   <footer class="app">
     <span data-i18n="footer1">所有处理均在浏览器本地完成，文件不会上传到任何服务器。</span><br>
     <span data-i18n="footer2">单元格文本超过 Excel 单元格上限（32767 字符）时将自动截断并以"..."结尾，同时在相应单元格添加批注"文本超长已截断"；仅提供 Excel（.xlsx）下载。</span><br>
-    <span data-i18n="footerCopy">Copyright 2026 © Free Excel Batch Merge Tool. All rights reserved.</span>
+    <span data-i18n="footerCopy">Copyright 2026 © Free Excel Batch Merge Tool. All rights reserved.</span><br>
+    <a id="privacyLink" href="#privacy" data-i18n="privacyLink">隐私说明</a>
   </footer>
+  <section class="card" id="privacy">
+    <div class="step-head">
+      <span class="step-no">i</span>
+      <div>
+        <div class="step-title" data-i18n="privacyTitle">隐私说明</div>
+      </div>
+    </div>
+    <div class="faq-list">
+      <p data-i18n="privacyBody">你的 Excel 和 zip 只在这台浏览器里读取、合并和下载，不会上传到服务器。页面使用 Google Analytics（G-PVZ55RQ0GF）统计访问、示例加载、合并和下载是否成功；语言选择保存在本机 localStorage，键名 excelmerge.lang。</p>
+    </div>
+  </section>
 
 </div>
 <div id="toasts"></div>
@@ -576,7 +599,10 @@ var I18N = {
     faq9q: '源文件名和已有列重名怎么办？',
     faq9a: '新列改名为「源文件名_2」，原来那一列保持不动。',
     faq10q: '文件很大会卡吗？',
-    faq10a: '全部在浏览器里处理。单个文件建议小于 20MB，更大的文件可能变慢或无响应。'
+    faq10a: '全部在浏览器里处理。单个文件建议小于 20MB，更大的文件可能变慢或无响应。',
+    privacyLink: '隐私说明',
+    privacyTitle: '隐私说明',
+    privacyBody: '你的 Excel 和 zip 只在这台浏览器里读取、合并和下载，不会上传到服务器。页面使用 Google Analytics（G-PVZ55RQ0GF）统计访问、示例加载、合并和下载是否成功；语言选择保存在本机 localStorage，键名 excelmerge.lang。'
   },
   en: {
     docTitle: 'Free Excel Batch Merge Tool',
@@ -699,9 +725,17 @@ var I18N = {
     faq9q: 'What if a column is already named Source File?',
     faq9a: 'The new column is named Source File_2. The original column is left as it is.',
     faq10q: 'Will a large file freeze the page?',
-    faq10a: 'Everything runs in the browser. Keep each file under 20MB; larger files may slow down or stop responding.'
+    faq10a: 'Everything runs in the browser. Keep each file under 20MB; larger files may slow down or stop responding.',
+    privacyLink: 'Privacy',
+    privacyTitle: 'Privacy',
+    privacyBody: 'Your Excel and zip files are read, merged, and downloaded only in this browser. They are not uploaded. This page uses Google Analytics (G-PVZ55RQ0GF) to count visits and whether loading a sample, merging, or downloading succeeds. Your language choice is stored in localStorage under excelmerge.lang.'
   }
 };
+
+function trackEvent(name, params) {
+  if (typeof gtag !== 'function') return;
+  gtag('event', name, params || {});
+}
 
 /* 当前语言：默认英文；用户手动切换过的选择（localStorage）优先 */
 var lang = 'en';
@@ -728,6 +762,14 @@ function applyStaticI18n() {
   document.title = t('docTitle');
   var desc = document.querySelector('meta[name="description"]');
   if (desc) desc.setAttribute('content', t('metaDesc'));
+  ['og:title','twitter:title'].forEach(function (key) {
+    var el = document.querySelector('meta[property="'+key+'"], meta[name="'+key+'"]');
+    if (el) el.setAttribute('content', t('docTitle'));
+  });
+  ['og:description','twitter:description'].forEach(function (key) {
+    var el = document.querySelector('meta[property="'+key+'"], meta[name="'+key+'"]');
+    if (el) el.setAttribute('content', t('metaDesc'));
+  });
   document.documentElement.lang = (lang === 'en') ? 'en' : 'zh-CN';
   Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function (el) {
     el.textContent = t(el.getAttribute('data-i18n'));
@@ -927,6 +969,7 @@ async function loadSamples() {
     files.push(new File([buf], s.name, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
   }
   await handleFiles(files);
+  trackEvent('load_sample', { file_count: files.length });
 }
 
 async function handleFiles(fileList) {
@@ -1211,10 +1254,12 @@ async function startMerge() {
     renderResults();
     setStatus('');
     toast(t('toastMerged', { n: results.length }), 'ok');
+    trackEvent('merge_success', { mode: mergeMode(), file_count: files.length, result_count: results.length });
   } catch (e) {
     console.error(e);
     setStatus('');
     toast(t('toastMergeFail', { msg: (e && e.message) || e }), 'error');
+    trackEvent('merge_error', { mode: mergeMode(), file_count: files.length });
   } finally {
     state.merging = false;
     btnMerge.textContent = t('btnMerge');
@@ -1458,6 +1503,7 @@ function resultCardHtml(r, index, title) {
 
 /* ===================== 下载 ===================== */
 function downloadBlob(blob, filename) {
+  trackEvent('download_success', { mode: mergeMode() });
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
