@@ -22,12 +22,13 @@ h1{font-size:34px;font-weight:500;letter-spacing:.25em;margin:0 0 48px;padding-l
     <h1 aria-label="生僻字发音器"><span class="title-note-wrap"><span class="title-note">shēng&nbsp;&nbsp;pì&nbsp;&nbsp;zì</span><span class="title-rare">生僻字</span></span>发音器</h1>
     <div class="input-wrap"><input id="input" type="text" autocomplete="off" placeholder="请输入任意文字……" aria-label="请输入文字"></div>
     <div class="buttons"><button id="read">开始朗读</button><button id="reset" class="secondary">重置</button></div>
+    <audio id="voice" preload="auto" src="./sheng-pi-zi.mp3"></audio>
   </main>
 </section>
 <script>
-const input=document.querySelector('#input'),note=document.querySelector('.title-note'),read=document.querySelector('#read');
-function clearState(){speechSynthesis.cancel();note.classList.remove('show');read.disabled=false;read.textContent='开始朗读';input.value='';input.focus()}
-function play(){speechSynthesis.cancel();note.classList.add('show');read.disabled=true;read.textContent='朗读中…';const u=new SpeechSynthesisUtterance('生僻字');u.lang='zh-CN';u.rate=.82;u.pitch=1.05;u.onend=()=>{read.disabled=false;read.textContent='再读一次'};u.onerror=()=>{read.disabled=false;read.textContent='开始朗读'};speechSynthesis.speak(u)}
+const input=document.querySelector('#input'),note=document.querySelector('.title-note'),read=document.querySelector('#read'),voice=document.querySelector('#voice');
+function clearState(){speechSynthesis.cancel();voice.pause();voice.currentTime=0;note.classList.remove('show');read.disabled=false;read.textContent='开始朗读';input.value='';input.focus()}
+function play(){speechSynthesis.cancel();note.classList.add('show');read.disabled=true;read.textContent='朗读中…';voice.currentTime=0;voice.play().then(()=>{}).catch(()=>{const u=new SpeechSynthesisUtterance('生僻字');u.lang='zh-CN';u.rate=.82;u.pitch=1.05;speechSynthesis.speak(u)});voice.onended=()=>{read.disabled=false;read.textContent='再读一次'};voice.onerror=()=>{read.disabled=false;read.textContent='开始朗读'}}
 read.addEventListener('click',play);document.querySelector('#reset').addEventListener('click',clearState);input.addEventListener('keydown',e=>{if(e.key==='Enter')play()});window.addEventListener('beforeunload',()=>speechSynthesis.cancel());
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
 </script>
