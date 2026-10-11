@@ -1,0 +1,14 @@
+{
+  "name": "生僻字发音器",
+  "short_name": "生僻字发音器",
+  "description": "输入什么都读成“生僻字”的趣味小工具",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef8fb",
+  "theme_color": "#88c9d5",
+  "lang": "zh-CN",
+  "icons": [
+    {"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
